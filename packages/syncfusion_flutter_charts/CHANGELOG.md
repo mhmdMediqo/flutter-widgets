@@ -1,3 +1,19 @@
+## Unreleased
+
+### Features
+
+* \#FR68922 - [PlotBand](https://pub.dev/documentation/syncfusion_flutter_charts/latest/charts/PlotBand-class.html) now provides an option to override its rendering using the `drawRect` and `drawText` methods.
+
+**Bugs**
+
+* \#GH2464 - Now, the series fill updates correctly when the axis range changes during screen resize or orientation changes.
+
+## [31.1.20] - 09/17/2025
+
+**General**
+ 
+* The compatible version of our Flutter charts widget has been updated to Flutter SDK 3.35.0.
+
 ## [30.2.6+1] - 20/08/2025 
 
 **Bugs**
