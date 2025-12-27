@@ -118,27 +118,7 @@ class PdfSignatureField extends PdfField {
   PdfAppearance get appearance => _helper.widget!.appearance;
 
   /// Gets or sets the digital signature for signing the field.
-  PdfSignature? get signature {
-    if (!_helper.isLoadedField || _signature != null) {
-      return _signature;
-    }
-
-    final PdfDictionary? dictionary = _helper.dictionary;
-    if (dictionary == null) {
-      return _signature;
-    }
-
-    if (dictionary.containsKey(PdfDictionaryProperties.v)) {
-      final PdfPrimitive? value = dictionary[PdfDictionaryProperties.v];
-      if (value != null) {
-        _setSignature(value);
-        if (_signature != null) {
-          PdfSignatureHelper.getHelper(_signature!).field = this;
-        }
-      }
-    }
-    return _signature;
-  }
+  PdfSignature? get signature => _signature;
 
   set signature(PdfSignature? value) {
     _initializeSignature(value);
