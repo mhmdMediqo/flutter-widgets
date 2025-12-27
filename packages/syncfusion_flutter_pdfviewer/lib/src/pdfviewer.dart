@@ -2279,12 +2279,18 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       if (_isAndroid) {
         await _getAndroidDeviceDetails();
       }
-      _pdfBytes =
+      final Uint8List? resolvedPdfBytes =
           _isEncrypted
               ? _decryptedBytes
               : isDocumentSaved
               ? _pdfBytes
-              : bytes!;
+              : bytes;
+      if (resolvedPdfBytes == null) {
+        throw Exception(
+          '_loadPdfDocument resolvedPdfBytes is null (source did not return data).',
+        );
+      }
+      _pdfBytes = resolvedPdfBytes;
       if (isPdfChanged) {
         _reset();
         _plugin = PdfViewerPlugin();
@@ -2301,8 +2307,11 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
           _performTextExtraction();
         }
       }
+      final Uint8List rendererBytes =
+          (_document != null ? _renderDigitalSignatures() : null) ?? _pdfBytes!;
+
       final int pageCount = await _plugin.initializePdfRenderer(
-        _renderDigitalSignatures() ?? _pdfBytes,
+        rendererBytes,
         _password,
       );
       _pdfViewerController._pageCount = pageCount;
