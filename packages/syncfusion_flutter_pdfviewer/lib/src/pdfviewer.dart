@@ -1471,7 +1471,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
   /// sets the InitialScrollOffset
   void _setInitialScrollOffset() {
-    _trace('_setInitialScrollOffset start keyIsPageStorage=${widget.key is PageStorageKey}');
+    _trace(
+      '_setInitialScrollOffset start keyIsPageStorage=${widget.key is PageStorageKey}',
+    );
     if (widget.key is PageStorageKey) {
       final dynamic offset = PageStorage.of(context).readState(context);
       _pdfViewerController._verticalOffset = offset.dy as double;
@@ -1667,7 +1669,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
       final PdfPage? page = _document!.form.fields[i].page;
       if (page == null) {
-        _trace('_retrieveFormFieldsDetails field[$i] page is null, skipping');
+        _trace(
+          '_retrieveFormFieldsDetails field[$i] | ${field.name} : page is null, skipping',
+        );
         continue;
       }
       final int pageIndex = _document!.pages.indexOf(page);
@@ -2055,9 +2059,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
   /// Retrieves the annotation details from the document.
   void _retrieveAnnotations() {
-    _trace(
-      '_retrieveAnnotations start pageCount=${_document?.pages.count}',
-    );
+    _trace('_retrieveAnnotations start pageCount=${_document?.pages.count}');
     for (int pageIndex = 0; pageIndex < _document!.pages.count; pageIndex++) {
       int zOrder = 0;
       final PdfPage page = _document!.pages[pageIndex];
@@ -2321,8 +2323,8 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
           _isEncrypted
               ? _decryptedBytes
               : isDocumentSaved
-                  ? _pdfBytes
-                  : bytes;
+              ? _pdfBytes
+              : bytes;
       _trace(
         '_loadPdfDocument resolvedPdfBytes length=${resolvedPdfBytes?.lengthInBytes} isEncrypted=$_isEncrypted isDocumentSaved=$isDocumentSaved',
       );
@@ -3480,8 +3482,10 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
   Future<PdfDocument?> _getPdfFile(Uint8List? value) async {
     _trace('_getPdfFile start valueLength=${value?.lengthInBytes}');
     if (value != null) {
-      final PdfDocument document =
-          PdfDocument(inputBytes: value, password: _password);
+      final PdfDocument document = PdfDocument(
+        inputBytes: value,
+        password: _password,
+      );
       _trace('_getPdfFile created PdfDocument');
       return document;
     }
