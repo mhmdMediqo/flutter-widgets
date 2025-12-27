@@ -1526,10 +1526,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
           );
         } else {
           widget.onDocumentLoadFailed?.call(
-            PdfDocumentLoadFailedDetails(
-              'Error',
-              'There was an error opening this document.',
-            ),
+            PdfDocumentLoadFailedDetails('Error', errorMessage),
           );
         }
       }
@@ -2385,10 +2382,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       } else {
         if (widget.onDocumentLoadFailed != null) {
           widget.onDocumentLoadFailed!(
-            PdfDocumentLoadFailedDetails(
-              'Error',
-              'There was an error opening this document.',
-            ),
+            PdfDocumentLoadFailedDetails('Error', errorMessage),
           );
         }
       }
