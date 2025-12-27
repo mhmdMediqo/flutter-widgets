@@ -16,10 +16,16 @@ class PdfViewerPlugin {
     Uint8List documentBytes,
     String? password,
   ) async {
+    debugPrint(
+      '[PdfViewerPlugin] initializePdfRenderer start bytes=${documentBytes.lengthInBytes} passwordProvided=${password != null}',
+    );
     _documentID = const Uuid().v1();
     final String? pageCount = await PdfViewerPlatform.instance
         .initializePdfRenderer(documentBytes, _documentID!, password);
     _pageCount = int.parse(pageCount!);
+    debugPrint(
+      '[PdfViewerPlugin] initializePdfRenderer completed pageCount=$_pageCount documentID=$_documentID',
+    );
     return _pageCount;
   }
 
