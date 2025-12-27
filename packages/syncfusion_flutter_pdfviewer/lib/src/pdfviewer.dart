@@ -1674,7 +1674,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       //   );
       //   continue;
       // }
-      int pageIndex = 1;
+      int pageIndex = 0;
       if (page != null) {
         pageIndex = _document!.pages.indexOf(page);
       }
