@@ -40,7 +40,7 @@ import 'form_fields/pdf_combo_box.dart';
 import 'form_fields/pdf_form_field.dart';
 import 'form_fields/pdf_list_box.dart';
 import 'form_fields/pdf_radio_button.dart';
-import 'form_fields/pdf_signature.dart';
+import 'form_fields/pdf_signature.dart' hide PdfSignature;
 import 'form_fields/pdf_text_box.dart';
 import 'text_extraction/text_extraction.dart';
 import 'theme/theme.dart';
@@ -1668,18 +1668,21 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       final PdfField field = _document!.form.fields[i];
 
       final PdfPage? page = _document!.form.fields[i].page;
-      if (page == null) {
-        _trace(
-          '_retrieveFormFieldsDetails field[$i] | ${field.name} : page is null, skipping',
-        );
-        continue;
+      // if (page == null) {
+      //   _trace(
+      //     '_retrieveFormFieldsDetails field[$i] | ${field.name} : page is null, skipping',
+      //   );
+      //   continue;
+      // }
+      int pageIndex = 1;
+      if (page != null) {
+        pageIndex = _document!.pages.indexOf(page);
       }
-      final int pageIndex = _document!.pages.indexOf(page);
       if (pageIndex == -1) {
         _trace(
           '_retrieveFormFieldsDetails field[$i] page not found in pages, skipping',
         );
-        continue;
+        // continue;
       }
 
       // Retrieve the text box field details
@@ -1811,15 +1814,27 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       }
 
       // Retrieve the signature field details
-      if (field is PdfSignatureField && field.signature == null) {
-        final PdfSignatureFormFieldHelper helper = PdfSignatureFormFieldHelper(
-          field,
-          pageIndex,
-          onValueChanged: _formFieldValueChanged,
-          onFocusChange: _formFieldFocusChange,
-        );
+      if (field is PdfSignatureField) {
+        PdfSignature? signatureValue;
+        try {
+          signatureValue = field.signature;
+        } catch (e, stackTrace) {
+          _trace(
+            '_retrieveFormFieldsDetails signature read failed field[$i] error=$e stack=$stackTrace',
+          );
+          continue;
+        }
+        if (signatureValue == null) {
+          final PdfSignatureFormFieldHelper helper =
+              PdfSignatureFormFieldHelper(
+                field,
+                pageIndex,
+                onValueChanged: _formFieldValueChanged,
+                onFocusChange: _formFieldFocusChange,
+              );
 
-        _pdfViewerController._formFields.add(helper.getFormField());
+          _pdfViewerController._formFields.add(helper.getFormField());
+        }
       }
 
       // Retrieve the list box field details
