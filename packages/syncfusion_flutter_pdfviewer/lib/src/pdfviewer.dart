@@ -1814,28 +1814,28 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       }
 
       // Retrieve the signature field details
-      if (field is PdfSignatureField) {
-        PdfSignature? signatureValue;
-        try {
-          signatureValue = field.signature;
-        } catch (e, stackTrace) {
-          _trace(
-            '_retrieveFormFieldsDetails signature read failed field[$i] error=$e stack=$stackTrace',
-          );
-          continue;
-        }
-        if (signatureValue == null) {
-          final PdfSignatureFormFieldHelper helper =
-              PdfSignatureFormFieldHelper(
-                field,
-                pageIndex,
-                onValueChanged: _formFieldValueChanged,
-                onFocusChange: _formFieldFocusChange,
-              );
+      // if (field is PdfSignatureField) {
+      //   PdfSignature? signatureValue;
+      //   try {
+      //     signatureValue = field.signature;
+      //   } catch (e, stackTrace) {
+      //     _trace(
+      //       '_retrieveFormFieldsDetails signature read failed field[$i] error=$e stack=$stackTrace',
+      //     );
+      //     continue;
+      //   }
+      //   if (signatureValue == null) {
+      //     final PdfSignatureFormFieldHelper helper =
+      //         PdfSignatureFormFieldHelper(
+      //           field,
+      //           pageIndex,
+      //           onValueChanged: _formFieldValueChanged,
+      //           onFocusChange: _formFieldFocusChange,
+      //         );
 
-          _pdfViewerController._formFields.add(helper.getFormField());
-        }
-      }
+      //     _pdfViewerController._formFields.add(helper.getFormField());
+      //   }
+      // }
 
       // Retrieve the list box field details
       if (field is PdfListBoxField) {
