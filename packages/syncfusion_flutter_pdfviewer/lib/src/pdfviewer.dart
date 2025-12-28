@@ -1668,16 +1668,15 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       final PdfField field = _document!.form.fields[i];
 
       final PdfPage? page = _document!.form.fields[i].page;
-      // if (page == null) {
-      //   _trace(
-      //     '_retrieveFormFieldsDetails field[$i] | ${field.name} : page is null, skipping',
-      //   );
-      //   continue;
-      // }
-      int pageIndex = 0;
-      if (page != null) {
-        pageIndex = _document!.pages.indexOf(page);
+      if (page == null) {
+        _trace(
+          '_retrieveFormFieldsDetails field[$i] | ${field.name} : page is null, skipping',
+        );
+        continue;
       }
+      int pageIndex = 0;
+      pageIndex = _document!.pages.indexOf(page);
+
       if (pageIndex == -1) {
         _trace(
           '_retrieveFormFieldsDetails field[$i] page not found in pages, skipping',
