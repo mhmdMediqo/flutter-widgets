@@ -1691,6 +1691,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
               <PdfTextFormField>[];
           for (int j = 0; j < field.items!.count; j++) {
             final PdfFieldItem item = field.items![j];
+            if (item.page == null) {
+              continue;
+            }
             final int itemPageIndex = _document!.pages.indexOf(item.page!);
 
             final PdfTextFormFieldHelper helper = PdfTextFormFieldHelper(
@@ -1746,6 +1749,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
               <PdfCheckboxFormField>[];
           for (int j = 0; j < field.items!.count; j++) {
             final PdfFieldItem item = field.items![j];
+            if (item.page == null) {
+              continue;
+            }
             final int itemPageIndex = _document!.pages.indexOf(item.page!);
             if (item is PdfCheckBoxItem) {
               final PdfCheckboxFormFieldHelper groupedItemHelper =
