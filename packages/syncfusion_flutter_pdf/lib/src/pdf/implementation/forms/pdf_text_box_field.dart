@@ -554,7 +554,7 @@ class PdfTextBoxField extends PdfField {
               width,
               params.bounds!.height,
             );
-            if (params.borderWidth != 0) {
+            if (params.borderWidth != 0 && params.borderPen != null) {
               graphics.drawLine(
                 params.borderPen!,
                 Offset(params.bounds!.left, params.bounds!.top),
