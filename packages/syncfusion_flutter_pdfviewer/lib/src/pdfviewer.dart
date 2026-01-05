@@ -40,7 +40,7 @@ import 'form_fields/pdf_combo_box.dart';
 import 'form_fields/pdf_form_field.dart';
 import 'form_fields/pdf_list_box.dart';
 import 'form_fields/pdf_radio_button.dart';
-import 'form_fields/pdf_signature.dart';
+import 'form_fields/pdf_signature.dart' hide PdfSignature;
 import 'form_fields/pdf_text_box.dart';
 import 'text_extraction/text_extraction.dart';
 import 'theme/theme.dart';
@@ -1243,6 +1243,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
   late PdfScrollDirection _scrollDirection;
   late PdfScrollDirection _tempScrollDirection;
   late PdfPageLayoutMode _pageLayoutMode;
+  void _trace(String message) => debugPrint('[SfPdfViewer] $message');
   double _pageOffsetBeforeScrollDirectionChange = 0.0;
   Size _pageSizeBeforeScrollDirectionChange = Size.zero;
   Offset _scrollDirectionSwitchOffset = Offset.zero;
@@ -1470,6 +1471,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
   /// sets the InitialScrollOffset
   void _setInitialScrollOffset() {
+    _trace(
+      '_setInitialScrollOffset start keyIsPageStorage=${widget.key is PageStorageKey}',
+    );
     if (widget.key is PageStorageKey) {
       final dynamic offset = PageStorage.of(context).readState(context);
       _pdfViewerController._verticalOffset = offset.dy as double;
@@ -1482,6 +1486,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       _pdfViewerController._verticalOffset = widget.initialScrollOffset.dy;
       _pdfViewerController._horizontalOffset = widget.initialScrollOffset.dx;
     }
+    _trace(
+      '_setInitialScrollOffset values vertical=${_pdfViewerController._verticalOffset} horizontal=${_pdfViewerController._horizontalOffset} zoom=${_pdfViewerController.zoomLevel}',
+    );
     _isDocumentLoadInitiated = false;
   }
 
@@ -1528,7 +1535,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
           widget.onDocumentLoadFailed?.call(
             PdfDocumentLoadFailedDetails(
               'Error',
-              'There was an error opening this document.',
+              "this is from _compare$errorMessage",
             ),
           );
         }
@@ -1654,11 +1661,33 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
   /// Retrieves the form field details in the document
   void _retrieveFormFieldsDetails() {
+    _trace(
+      '_retrieveFormFieldsDetails start formFields=${_document?.form.fields.count}',
+    );
     for (int i = 0; i < _document!.form.fields.count; i++) {
       final PdfField field = _document!.form.fields[i];
 
-      final PdfPage? page = _document!.form.fields[i].page;
-      final int pageIndex = _document!.pages.indexOf(page!);
+      PdfPage? page = _document!.form.fields[i].page;
+      int pageIndex = -1;
+      if (page != null) {
+        pageIndex = _document!.pages.indexOf(page);
+      } else {
+        _trace(
+          '_retrieveFormFieldsDetails field[$i] | ${field.name} : page missing, fallback pageIndex=$pageIndex',
+        );
+        continue;
+      }
+      // if (page == null || pageIndex == -1) {
+      //   // Some PDFs miss a proper page reference; fall back to the first page to avoid null crash.
+      //   page = _document!.pages.count > 0 ? _document!.pages[0] : null;
+      //   pageIndex = page != null ? 0 : -1;
+      //   _trace(
+      //     '_retrieveFormFieldsDetails field[$i] | ${field.name} : page missing, fallback pageIndex=$pageIndex',
+      //   );
+      // }
+      // if (page == null || pageIndex == -1) {
+      //   continue;
+      // }
 
       // Retrieve the text box field details
       if (field is PdfTextBoxField) {
@@ -1667,6 +1696,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
               <PdfTextFormField>[];
           for (int j = 0; j < field.items!.count; j++) {
             final PdfFieldItem item = field.items![j];
+            if (item.page == null) {
+              continue;
+            }
             final int itemPageIndex = _document!.pages.indexOf(item.page!);
 
             final PdfTextFormFieldHelper helper = PdfTextFormFieldHelper(
@@ -1722,6 +1754,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
               <PdfCheckboxFormField>[];
           for (int j = 0; j < field.items!.count; j++) {
             final PdfFieldItem item = field.items![j];
+            if (item.page == null) {
+              continue;
+            }
             final int itemPageIndex = _document!.pages.indexOf(item.page!);
             if (item is PdfCheckBoxItem) {
               final PdfCheckboxFormFieldHelper groupedItemHelper =
@@ -1789,16 +1824,28 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       }
 
       // Retrieve the signature field details
-      if (field is PdfSignatureField && field.signature == null) {
-        final PdfSignatureFormFieldHelper helper = PdfSignatureFormFieldHelper(
-          field,
-          pageIndex,
-          onValueChanged: _formFieldValueChanged,
-          onFocusChange: _formFieldFocusChange,
-        );
+      // if (field is PdfSignatureField) {
+      //   PdfSignature? signatureValue;
+      //   try {
+      //     signatureValue = field.signature;
+      //   } catch (e, stackTrace) {
+      //     _trace(
+      //       '_retrieveFormFieldsDetails signature read failed field[$i] error=$e stack=$stackTrace',
+      //     );
+      //     continue;
+      //   }
+      //   if (signatureValue == null) {
+      //     final PdfSignatureFormFieldHelper helper =
+      //         PdfSignatureFormFieldHelper(
+      //           field,
+      //           pageIndex,
+      //           onValueChanged: _formFieldValueChanged,
+      //           onFocusChange: _formFieldFocusChange,
+      //         );
 
-        _pdfViewerController._formFields.add(helper.getFormField());
-      }
+      //     _pdfViewerController._formFields.add(helper.getFormField());
+      //   }
+      // }
 
       // Retrieve the list box field details
       if (field is PdfListBoxField) {
@@ -1964,6 +2011,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
         ),
       );
     }
+    _trace(
+      '_retrieveFormFieldsDetails completed trackedFormFields=${_pdfViewerController._formFields.length}',
+    );
   }
 
   /// Update the form field values.
@@ -2034,6 +2084,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
   /// Retrieves the annotation details from the document.
   void _retrieveAnnotations() {
+    _trace('_retrieveAnnotations start pageCount=${_document?.pages.count}');
     for (int pageIndex = 0; pageIndex < _document!.pages.count; pageIndex++) {
       int zOrder = 0;
       final PdfPage page = _document!.pages[pageIndex];
@@ -2174,91 +2225,168 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
   /// Save the PDF document with the modified data and returns the data bytes.
   Future<List<int>> _saveDocument() async {
-    // Update the signature form fields data
-    _updateSignatureFormFields();
+    _trace(
+      '_saveDocument start flattenOption=${_pdfViewerController._flattenOption} isSignatureSaved=$_isSignatureSaved documentNull=${_document == null}',
+    );
+    try {
+      // Update the signature form fields data
+      _updateSignatureFormFields();
 
-    // Update the annotations in the document
-    _updateAnnotations();
+      // Update the annotations in the document
+      _updateAnnotations();
 
-    // Set the default appearance for the form.
-    _document!.form.setDefaultAppearance(false);
+      // Set the default appearance for the form.
+      _trace('_saveDocument setDefaultAppearance');
+      _document!.form.setDefaultAppearance(false);
 
-    // Flatten the form fields if the PdfFlattenOption is enabled.
-    if (_pdfViewerController._flattenOption == PdfFlattenOption.formFields) {
-      _document!.form.flattenAllFields();
+      // Flatten the form fields if the PdfFlattenOption is enabled.
+      if (_pdfViewerController._flattenOption == PdfFlattenOption.formFields) {
+        _trace('_saveDocument flattenAllFields triggered');
+        _document!.form.flattenAllFields();
+      }
+
+      // Save and reload the document
+      _trace('_saveDocument saving document');
+      _pdfBytes = Uint8List(0);
+      _pdfBytes = Uint8List.fromList(await _document!.save());
+      _trace('_saveDocument save completed length=${_pdfBytes.lengthInBytes}');
+
+      if (_isSignatureSaved ||
+          _pdfViewerController._flattenOption == PdfFlattenOption.formFields) {
+        _trace('_saveDocument reloading document after save');
+        _loadPdfDocument(true, true);
+        _isSignatureSaved = false;
+      }
+
+      _trace(
+        '_saveDocument completed returning length=${_pdfBytes.lengthInBytes}',
+      );
+      return _pdfBytes.toList();
+    } catch (e, stackTrace) {
+      _trace('_saveDocument exception=$e stackTrace=$stackTrace');
+      rethrow;
     }
-
-    // Save and reload the document
-    _pdfBytes = Uint8List(0);
-    _pdfBytes = Uint8List.fromList(await _document!.save());
-
-    if (_isSignatureSaved ||
-        _pdfViewerController._flattenOption == PdfFlattenOption.formFields) {
-      _loadPdfDocument(true, true);
-      _isSignatureSaved = false;
-    }
-
-    return _pdfBytes.toList();
   }
 
   /// Update the signature form fields data
   void _updateSignatureFormFields() {
-    for (final PdfFormField signatureField
-        in _pdfViewerController._formFields) {
-      if (signatureField is PdfSignatureFormField) {
-        final PdfSignatureFormFieldHelper helper =
-            PdfFormFieldHelper.getHelper(signatureField)
-                as PdfSignatureFormFieldHelper;
-        final PdfPage page = helper.pdfSignatureField.page!;
-        if (signatureField.signature != null) {
-          final List<int>? bitmapBytes = signatureField.signature;
-          if (bitmapBytes != null) {
-            page.graphics.drawImage(
-              PdfBitmap(bitmapBytes),
-              Rect.fromLTWH(
-                helper.bounds.left,
-                helper.bounds.top,
-                helper.bounds.width,
-                helper.bounds.height,
-              ),
-            );
-            helper.pdfField.form!.fields.remove(helper.pdfSignatureField);
+    _trace(
+      '_updateSignatureFormFields start fieldCount=${_pdfViewerController._formFields.length}',
+    );
+    try {
+      for (final PdfFormField signatureField
+          in _pdfViewerController._formFields) {
+        if (signatureField is PdfSignatureFormField) {
+          final PdfSignatureFormFieldHelper helper =
+              PdfFormFieldHelper.getHelper(signatureField)
+                  as PdfSignatureFormFieldHelper;
+          final PdfPage page = helper.pdfSignatureField.page!;
+          final int pageIndex = _document?.pages.indexOf(page) ?? -1;
+          final int pageNumber = pageIndex != -1 ? pageIndex + 1 : -1;
+          _trace(
+            '_updateSignatureFormFields processing name=${signatureField.name} page=$pageNumber hasSignature=${signatureField.signature != null}',
+          );
+          if (signatureField.signature != null) {
+            final List<int>? bitmapBytes = signatureField.signature;
+            if (bitmapBytes != null) {
+              _trace(
+                '_updateSignatureFormFields drawing image bounds=${helper.bounds} byteLength=${bitmapBytes.length}',
+              );
+              page.graphics.drawImage(
+                PdfBitmap(bitmapBytes),
+                Rect.fromLTWH(
+                  helper.bounds.left,
+                  helper.bounds.top,
+                  helper.bounds.width,
+                  helper.bounds.height,
+                ),
+              );
+              helper.pdfField.form!.fields.remove(helper.pdfSignatureField);
+              _trace(
+                '_updateSignatureFormFields removed signature field name=${signatureField.name} from form',
+              );
+            }
+            _isSignatureSaved = true;
           }
-          _isSignatureSaved = true;
         }
       }
+      _trace(
+        '_updateSignatureFormFields completed isSignatureSaved=$_isSignatureSaved annotationsCount=${_pdfViewerController._annotations.length}',
+      );
+    } catch (e, stackTrace) {
+      _trace('_updateSignatureFormFields exception=$e stackTrace=$stackTrace');
+      rethrow;
     }
   }
 
   /// Updates the existing annotations and add new annotations.
   void _updateAnnotations() {
-    for (final Annotation annotation in _pdfViewerController._annotations) {
-      final PdfPage pdfPage = _document!.pages[annotation.pageNumber - 1];
-      PdfAnnotation? pdfAnnotation;
+    _trace(
+      '_updateAnnotations start count=${_pdfViewerController._annotations.length} mapSize=${_annotationMap.length}',
+    );
+    try {
+      for (final Annotation annotation in _pdfViewerController._annotations) {
+        final PdfPage pdfPage = _document!.pages[annotation.pageNumber - 1];
+        PdfAnnotation? pdfAnnotation;
 
-      if (_annotationMap.containsKey(annotation)) {
-        pdfAnnotation = _annotationMap[annotation];
+        final bool hasExisting = _annotationMap.containsKey(annotation);
+        _trace(
+          '_updateAnnotations processing type=${annotation.runtimeType} page=${annotation.pageNumber} hasExisting=$hasExisting',
+        );
+        if (hasExisting) {
+          pdfAnnotation = _annotationMap[annotation];
+        }
+
+        pdfAnnotation = annotation.saveToPage(pdfPage, pdfAnnotation);
+        _trace(
+          '_updateAnnotations saved type=${annotation.runtimeType} page=${annotation.pageNumber} resultType=${pdfAnnotation.runtimeType}',
+        );
+
+        if (!hasExisting) {
+          _annotationMap.putIfAbsent(annotation, () => pdfAnnotation!);
+          _trace(
+            '_updateAnnotations added to map type=${annotation.runtimeType} page=${annotation.pageNumber}',
+          );
+        }
       }
-
-      pdfAnnotation = annotation.saveToPage(pdfPage, pdfAnnotation);
-
-      if (!_annotationMap.containsKey(annotation)) {
-        _annotationMap.putIfAbsent(annotation, () => pdfAnnotation!);
-      }
+      _removeAnnotationsFromDocument();
+      _trace(
+        '_updateAnnotations completed mapSize=${_annotationMap.length} removedCount=${_removedAnnotations.length}',
+      );
+    } catch (e, stackTrace) {
+      _trace('_updateAnnotations exception=$e stackTrace=$stackTrace');
+      rethrow;
     }
-    _removeAnnotationsFromDocument();
   }
 
   /// Removes the annotations from the document if any existing annotation is removed.
   void _removeAnnotationsFromDocument() {
-    for (final Annotation annotation in _removedAnnotations) {
-      final int pageNumber = annotation.pageNumber;
-      final PdfPage pdfPage = _document!.pages[pageNumber - 1];
-      if (_annotationMap.containsKey(annotation)) {
-        final PdfAnnotation pdfAnnotation = _annotationMap[annotation]!;
-        _annotationMap.remove(annotation);
-        pdfPage.annotations.remove(pdfAnnotation);
+    _trace(
+      '_removeAnnotationsFromDocument start removedCount=${_removedAnnotations.length}',
+    );
+    try {
+      for (final Annotation annotation in _removedAnnotations) {
+        final int pageNumber = annotation.pageNumber;
+        final PdfPage pdfPage = _document!.pages[pageNumber - 1];
+        final bool containsAnnotation = _annotationMap.containsKey(annotation);
+        _trace(
+          '_removeAnnotationsFromDocument processing type=${annotation.runtimeType} page=$pageNumber inMap=$containsAnnotation',
+        );
+        if (containsAnnotation) {
+          final PdfAnnotation pdfAnnotation = _annotationMap[annotation]!;
+          _annotationMap.remove(annotation);
+          pdfPage.annotations.remove(pdfAnnotation);
+          _trace(
+            '_removeAnnotationsFromDocument removed type=${annotation.runtimeType} page=$pageNumber remainingMapSize=${_annotationMap.length}',
+          );
+        }
       }
+      _trace('_removeAnnotationsFromDocument completed');
+    } catch (e, stackTrace) {
+      _trace(
+        '_removeAnnotationsFromDocument exception=$e stackTrace=$stackTrace',
+      );
+      rethrow;
     }
   }
 
@@ -2268,54 +2396,88 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
     bool isDocumentSaved, [
     Uint8List? bytes,
   ]) async {
+    _trace(
+      '_loadPdfDocument start isPdfChanged=$isPdfChanged isDocumentSaved=$isDocumentSaved bytesProvided=${bytes != null}',
+    );
     try {
       if (bytes == null) {
         if (!_isEncrypted && !isDocumentSaved) {
+          _trace('_loadPdfDocument fetching bytes from source');
           _getPdfFileCancellableOperation =
               CancelableOperation<Uint8List>.fromFuture(
                 widget._source.getBytes(context),
               );
           bytes = await _getPdfFileCancellableOperation?.value;
+          _trace(
+            '_loadPdfDocument source bytes fetched length=${bytes?.lengthInBytes}',
+          );
           _originalSourceBytes = bytes;
         }
       }
       if (_isAndroid) {
+        _trace('_loadPdfDocument calling _getAndroidDeviceDetails');
         await _getAndroidDeviceDetails();
       }
-      _pdfBytes =
+      final Uint8List? resolvedPdfBytes =
           _isEncrypted
               ? _decryptedBytes
               : isDocumentSaved
               ? _pdfBytes
-              : bytes!;
+              : bytes;
+      _trace(
+        '_loadPdfDocument resolvedPdfBytes length=${resolvedPdfBytes?.lengthInBytes} isEncrypted=$_isEncrypted isDocumentSaved=$isDocumentSaved',
+      );
+      if (resolvedPdfBytes == null) {
+        throw Exception(
+          '_loadPdfDocument resolvedPdfBytes is null (source did not return data).',
+        );
+      }
+      _pdfBytes = resolvedPdfBytes;
       if (isPdfChanged) {
+        _trace('_loadPdfDocument resetting and recreating plugin');
         _reset();
         _plugin = PdfViewerPlugin();
         _checkMount();
       }
       _pdfDocumentLoadCancellableOperation =
           CancelableOperation<PdfDocument?>.fromFuture(_getPdfFile(_pdfBytes));
+      _trace('_loadPdfDocument awaiting _getPdfFile');
       _document = await _pdfDocumentLoadCancellableOperation?.value;
+      _trace('_loadPdfDocument _document is null=${_document == null}');
       if (_document != null) {
+        _trace('_loadPdfDocument _retrieveFormFieldsDetails start');
         _retrieveFormFieldsDetails();
+        _trace('_loadPdfDocument _retrieveAnnotations start');
         _retrieveAnnotations();
         _pdfTextExtractor = PdfTextExtractor(_document!);
+        _trace('_loadPdfDocument PdfTextExtractor created');
         if (!kIsWeb) {
+          _trace('_loadPdfDocument _performTextExtraction start');
           _performTextExtraction();
         }
       }
+      final Uint8List rendererBytes =
+          (_document != null ? _renderDigitalSignatures() : null) ?? _pdfBytes!;
+      _trace(
+        '_loadPdfDocument rendererBytes length=${rendererBytes.lengthInBytes} documentPresent=${_document != null}',
+      );
+
       final int pageCount = await _plugin.initializePdfRenderer(
-        _renderDigitalSignatures() ?? _pdfBytes,
+        rendererBytes,
         _password,
       );
+      _trace('_loadPdfDocument initializePdfRenderer pageCount=$pageCount');
       _pdfViewerController._pageCount = pageCount;
       if (pageCount > 0) {
         _pdfViewerController._pageNumber = 1;
       }
       _pdfViewerController.zoomLevel = widget.initialZoomLevel;
+      _trace('_loadPdfDocument _setInitialScrollOffset');
       _setInitialScrollOffset();
+      _trace('_loadPdfDocument _getPageSizes');
       _getPageSizes();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _trace('_loadPdfDocument exception=$e stack=$stackTrace');
       _pdfViewerController._reset();
       _hasError = true;
       _textExtractionEngine?.dispose();
@@ -2385,21 +2547,23 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       } else {
         if (widget.onDocumentLoadFailed != null) {
           widget.onDocumentLoadFailed!(
-            PdfDocumentLoadFailedDetails(
-              'Error',
-              'There was an error opening this document.',
-            ),
+            PdfDocumentLoadFailedDetails('Error', errorMessage),
           );
         }
       }
     } finally {
+      _trace('_loadPdfDocument finally');
       _checkMount();
     }
   }
 
   /// Render and flatten digital signatures in the PDF document.
   Uint8List? _renderDigitalSignatures() {
+    _trace('_renderDigitalSignatures start documentNull=${_document == null}');
     if (_document!.form.fields.count != 0) {
+      _trace(
+        '_renderDigitalSignatures fieldsCount=${_document!.form.fields.count}',
+      );
       final PdfDocument pdfDocument = PdfDocument(inputBytes: _pdfBytes);
       bool isDigitalSignature = false;
       Uint8List? digitalSignatureBytes;
@@ -2418,23 +2582,30 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       pdfDocument.dispose();
       return digitalSignatureBytes;
     }
+    _trace('_renderDigitalSignatures no form fields');
     return null;
   }
 
   /// Perform text extraction for mobile, windows and macOS platforms.
   Future<void> _performTextExtraction() async {
+    _trace('_performTextExtraction start');
     if (_document != null && _document!.pages.count > 0) {
       _textExtractionEngine = TextExtractionEngine(_document!);
 
       _textExtractionEngine!.extractText().then((Map<int, String> value) {
         _extractedTextCollection.addAll(value);
         _isTextExtractionCompleted = true;
+        _trace(
+          '_performTextExtraction completed entries=${value.length} searchTextEmpty=${_pdfViewerController._searchText.isEmpty}',
+        );
         if (_pdfViewerController._searchText.isNotEmpty) {
           _pdfViewerController._notifyPropertyChangedListeners(
             property: 'searchText',
           );
         }
       });
+    } else {
+      _trace('_performTextExtraction skipped document null or no pages');
     }
   }
 
@@ -3367,10 +3538,18 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
   /// To check whether the Android device version is 35 or more
   Future<void> _getAndroidDeviceDetails() async {
+    _trace('_getAndroidDeviceDetails start');
     if (_isAndroid && _isAtLeastApiLevel35 == null) {
       final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
       final AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
       _isAtLeastApiLevel35 = androidInfo.version.sdkInt >= 35;
+      _trace(
+        '_getAndroidDeviceDetails sdkInt=${androidInfo.version.sdkInt} isAtLeastApiLevel35=$_isAtLeastApiLevel35',
+      );
+    } else {
+      _trace(
+        '_getAndroidDeviceDetails skip _isAndroid=$_isAndroid cached=$_isAtLeastApiLevel35',
+      );
     }
   }
 
@@ -3400,9 +3579,16 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
   /// Get the file of the Pdf.
   Future<PdfDocument?> _getPdfFile(Uint8List? value) async {
+    _trace('_getPdfFile start valueLength=${value?.lengthInBytes}');
     if (value != null) {
-      return PdfDocument(inputBytes: value, password: _password);
+      final PdfDocument document = PdfDocument(
+        inputBytes: value,
+        password: _password,
+      );
+      _trace('_getPdfFile created PdfDocument');
+      return document;
     }
+    _trace('_getPdfFile received null value');
     return null;
   }
 
@@ -6624,6 +6810,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
   /// Extracts and stores the width and height of each page from the PDF document.
   void _getPageSizes() {
+    _trace('_getPageSizes start pageCount=${_document?.pages.count}');
     _originalWidth = <double>[];
     _originalHeight = <double>[];
     for (int pageIndex = 0; pageIndex < _document!.pages.count; pageIndex++) {
@@ -6638,6 +6825,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       _originalWidth!.add(width);
       _originalHeight!.add(height);
     }
+    _trace(
+      '_getPageSizes done widths=${_originalWidth?.length} heights=${_originalHeight?.length}',
+    );
   }
 }
 
