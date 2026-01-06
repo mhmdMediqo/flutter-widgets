@@ -2247,6 +2247,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
       // Save and reload the document
       _trace('_saveDocument saving document');
+      // Force a full file rewrite to avoid incremental-save offsets that can
+      // corrupt the cross-reference table when reloading the saved bytes.
+      _document!.fileStructure.incrementalUpdate = false;
       _pdfBytes = Uint8List(0);
       _pdfBytes = Uint8List.fromList(await _document!.save());
       _trace('_saveDocument save completed length=${_pdfBytes.lengthInBytes}');
