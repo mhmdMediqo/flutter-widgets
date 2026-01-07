@@ -216,32 +216,67 @@ class PdfForm implements IPdfWrapper {
   //Implementation
 
   void _initialize(PdfDictionary formDictionary, PdfCrossTable crossTable) {
+    void logInitialize(String message) {
+      assert(() {
+        // ignore: avoid_print
+        print('[PdfForm._initialize] $message');
+        return true;
+      }());
+    }
+
+    logInitialize('start dictionaryCount=${formDictionary.count}');
     _helper.dictionary = formDictionary;
+    logInitialize('dictionary assigned');
     //Get terminal fields.
+    logInitialize('creating fields');
     _createFields();
+    logInitialize('fields created count=${_helper._fields?.count ?? 0}');
     //Gets NeedAppearance
-    if (_helper.dictionary!.containsKey(
+    final bool hasNeedAppearances = _helper.dictionary!.containsKey(
       PdfDictionaryProperties.needAppearances,
-    )) {
+    );
+    logInitialize('needAppearances key present=$hasNeedAppearances');
+    if (hasNeedAppearances) {
       final PdfBoolean needAppearance =
           crossTable.getObject(
                 _helper.dictionary![PdfDictionaryProperties.needAppearances],
               )!
               as PdfBoolean;
       _helper.needAppearances = needAppearance.value;
+      _helper._isDefaultAppearance = needAppearance.value ?? true;
       _helper.setAppearanceDictionary = true;
+      logInitialize(
+        'needAppearances value=${needAppearance.value} setAppearanceDictionary=true',
+      );
     } else {
       _helper.setAppearanceDictionary = false;
+      logInitialize('needAppearances missing setAppearanceDictionary=false');
     }
     //Gets resource dictionary
-    if (_helper.dictionary!.containsKey(PdfDictionaryProperties.dr)) {
+    final bool hasResourceDictionary = _helper.dictionary!.containsKey(
+      PdfDictionaryProperties.dr,
+    );
+    logInitialize('resource dictionary key present=$hasResourceDictionary');
+    if (hasResourceDictionary) {
       final IPdfPrimitive? resourceDictionary = PdfCrossTable.dereference(
         _helper.dictionary![PdfDictionaryProperties.dr],
       );
       if (resourceDictionary != null && resourceDictionary is PdfDictionary) {
         _helper.resources = PdfResources(resourceDictionary);
+        logInitialize(
+          'resource dictionary assigned count=${resourceDictionary.count}',
+        );
+      } else {
+        logInitialize(
+          'resource dictionary missing or invalid type=${resourceDictionary.runtimeType}',
+        );
       }
+    } else {
+      logInitialize('resource dictionary not found');
     }
+    logInitialize(
+      'completed needAppearances=${_helper.needAppearances} setAppearanceDictionary=${_helper.setAppearanceDictionary}',
+    );
   }
 
   //Retrieves the terminal fields.
