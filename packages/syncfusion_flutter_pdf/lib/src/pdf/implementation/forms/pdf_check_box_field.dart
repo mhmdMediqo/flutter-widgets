@@ -659,34 +659,40 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
     } else {
       widget = item!._checkBaseHelper.dictionary;
     }
+    String? value = '';
+    Rect rect;
+    if (item != null) {
+      value = getItemValue(widget!, item._checkBaseHelper.crossTable);
+      rect = item.bounds;
+    } else if (fieldItem != null) {
+      value = getItemValue(
+        widget!,
+        PdfFieldHelper.getHelper(
+          PdfFieldItemHelper.getHelper(fieldItem).field,
+        ).crossTable,
+      );
+      rect = fieldItem.bounds;
+    } else {
+      value = getItemValue(widget!, crossTable);
+      rect = checkField.bounds;
+    }
+    final String appearanceValue =
+        value == null || value.isEmpty
+            ? PdfDictionaryProperties.yes
+            : value;
     if ((widget != null) && (widget.containsKey(PdfDictionaryProperties.ap))) {
-      final PdfDictionary? appearance =
+      PdfDictionary? appearance =
           crossTable!.getObject(widget[PdfDictionaryProperties.ap])
               as PdfDictionary?;
-      if ((appearance != null) &&
-          (appearance.containsKey(PdfDictionaryProperties.n))) {
-        String? value = '';
-        Rect rect;
-        if (item != null) {
-          value = getItemValue(widget, item._checkBaseHelper.crossTable);
-          rect = item.bounds;
-        } else if (fieldItem != null) {
-          value = getItemValue(
-            widget,
-            PdfFieldHelper.getHelper(
-              PdfFieldItemHelper.getHelper(fieldItem).field,
-            ).crossTable,
-          );
-          rect = fieldItem.bounds;
-        } else {
-          value = getItemValue(widget, crossTable);
-          rect = checkField.bounds;
-        }
+      appearance ??= PdfDictionary();
+      if (appearance.containsKey(PdfDictionaryProperties.n)) {
         IPdfPrimitive? holder = PdfCrossTable.dereference(
           appearance[PdfDictionaryProperties.n],
         );
         PdfDictionary? normal = holder as PdfDictionary?;
-        if (fieldChanged == true && normal != null) {
+        if (fieldChanged == true ||
+            normal == null ||
+            !normal.containsKey(appearanceValue)) {
           normal = PdfDictionary();
           final PdfTemplate checkedTemplate = PdfTemplate(
             rect.width,
@@ -708,7 +714,10 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
             item,
             fieldItem,
           );
-          normal.setProperty(value, PdfReferenceHolder(checkedTemplate));
+          normal.setProperty(
+            appearanceValue,
+            PdfReferenceHolder(checkedTemplate),
+          );
           normal.setProperty(
             PdfDictionaryProperties.off,
             PdfReferenceHolder(unchekedTemplate),
@@ -720,7 +729,9 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
           appearance[PdfDictionaryProperties.d],
         );
         PdfDictionary? pressed = holder as PdfDictionary?;
-        if (fieldChanged == true && pressed != null) {
+        if (fieldChanged == true ||
+            pressed == null ||
+            !pressed.containsKey(appearanceValue)) {
           pressed = PdfDictionary();
           final PdfTemplate checkedTemplate = PdfTemplate(
             rect.width,
@@ -746,26 +757,130 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
             PdfDictionaryProperties.off,
             PdfReferenceHolder(unchekedTemplate),
           );
-          pressed.setProperty(value, PdfReferenceHolder(checkedTemplate));
+          pressed.setProperty(
+            appearanceValue,
+            PdfReferenceHolder(checkedTemplate),
+          );
           appearance.remove(PdfDictionaryProperties.d);
           appearance[PdfDictionaryProperties.d] = PdfReferenceHolder(pressed);
         }
+      } else {
+        final PdfDictionary normal = PdfDictionary();
+        final PdfTemplate checkedTemplate = PdfTemplate(rect.width, rect.height);
+        final PdfTemplate unchekedTemplate = PdfTemplate(
+          rect.width,
+          rect.height,
+        );
+        drawStateItem(
+          checkedTemplate.graphics!,
+          PdfCheckFieldState.checked,
+          item,
+          fieldItem,
+        );
+        drawStateItem(
+          unchekedTemplate.graphics!,
+          PdfCheckFieldState.unchecked,
+          item,
+          fieldItem,
+        );
+        normal.setProperty(
+          appearanceValue,
+          PdfReferenceHolder(checkedTemplate),
+        );
+        normal.setProperty(
+          PdfDictionaryProperties.off,
+          PdfReferenceHolder(unchekedTemplate),
+        );
+        appearance[PdfDictionaryProperties.n] = PdfReferenceHolder(normal);
+        final PdfDictionary pressed = PdfDictionary();
+        final PdfTemplate pressedCheckedTemplate = PdfTemplate(
+          rect.width,
+          rect.height,
+        );
+        final PdfTemplate pressedUncheckedTemplate = PdfTemplate(
+          rect.width,
+          rect.height,
+        );
+        drawStateItem(
+          pressedCheckedTemplate.graphics!,
+          PdfCheckFieldState.pressedChecked,
+          item,
+          fieldItem,
+        );
+        drawStateItem(
+          pressedUncheckedTemplate.graphics!,
+          PdfCheckFieldState.pressedUnchecked,
+          item,
+          fieldItem,
+        );
+        pressed.setProperty(
+          PdfDictionaryProperties.off,
+          PdfReferenceHolder(pressedUncheckedTemplate),
+        );
+        pressed.setProperty(
+          appearanceValue,
+          PdfReferenceHolder(pressedCheckedTemplate),
+        );
+        appearance[PdfDictionaryProperties.d] = PdfReferenceHolder(pressed);
       }
       widget.setProperty(PdfDictionaryProperties.ap, appearance);
-    } else if (PdfFormHelper.getHelper(
-      checkField.form!,
-    ).setAppearanceDictionary) {
-      PdfFormHelper.getHelper(checkField.form!).needAppearances = true;
-    } else if (PdfFormHelper.getHelper(form!).setAppearanceDictionary &&
-        !PdfFormHelper.getHelper(form!).needAppearances!) {
-      final PdfDictionary dic = PdfDictionary();
-      final PdfTemplate template = PdfTemplate(
-        checkField.bounds.width,
-        checkField.bounds.height,
+    } else {
+      final PdfDictionary appearance = PdfDictionary();
+      final PdfDictionary normal = PdfDictionary();
+      final PdfTemplate checkedTemplate = PdfTemplate(rect.width, rect.height);
+      final PdfTemplate unchekedTemplate = PdfTemplate(rect.width, rect.height);
+      drawStateItem(
+        checkedTemplate.graphics!,
+        PdfCheckFieldState.checked,
+        item,
+        fieldItem,
       );
-      drawAppearance(template);
-      dic.setProperty(PdfDictionaryProperties.n, PdfReferenceHolder(template));
-      widget!.setProperty(PdfDictionaryProperties.ap, dic);
+      drawStateItem(
+        unchekedTemplate.graphics!,
+        PdfCheckFieldState.unchecked,
+        item,
+        fieldItem,
+      );
+      normal.setProperty(
+        appearanceValue,
+        PdfReferenceHolder(checkedTemplate),
+      );
+      normal.setProperty(
+        PdfDictionaryProperties.off,
+        PdfReferenceHolder(unchekedTemplate),
+      );
+      appearance[PdfDictionaryProperties.n] = PdfReferenceHolder(normal);
+      final PdfDictionary pressed = PdfDictionary();
+      final PdfTemplate pressedCheckedTemplate = PdfTemplate(
+        rect.width,
+        rect.height,
+      );
+      final PdfTemplate pressedUncheckedTemplate = PdfTemplate(
+        rect.width,
+        rect.height,
+      );
+      drawStateItem(
+        pressedCheckedTemplate.graphics!,
+        PdfCheckFieldState.pressedChecked,
+        item,
+        fieldItem,
+      );
+      drawStateItem(
+        pressedUncheckedTemplate.graphics!,
+        PdfCheckFieldState.pressedUnchecked,
+        item,
+        fieldItem,
+      );
+      pressed.setProperty(
+        PdfDictionaryProperties.off,
+        PdfReferenceHolder(pressedUncheckedTemplate),
+      );
+      pressed.setProperty(
+        appearanceValue,
+        PdfReferenceHolder(pressedCheckedTemplate),
+      );
+      appearance[PdfDictionaryProperties.d] = PdfReferenceHolder(pressed);
+      widget!.setProperty(PdfDictionaryProperties.ap, appearance);
     }
   }
 
