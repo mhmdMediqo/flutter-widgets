@@ -1137,7 +1137,8 @@ class PdfFormHelper {
             --i;
           } else if (helper.changed ||
               isNeedAppearance ||
-              (setAppearanceDictionary && !isSigned)) {
+              (setAppearanceDictionary && !isSigned) ||
+              field is PdfCheckBoxField) {
             helper.beginSave();
           }
         } else {

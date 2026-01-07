@@ -659,11 +659,17 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
     } else {
       widget = item!._checkBaseHelper.dictionary;
     }
+    PdfDictionary? fieldDictionary;
+    bool isChecked = false;
     String? value = '';
     Rect rect;
     if (item != null) {
       value = getItemValue(widget!, item._checkBaseHelper.crossTable);
       rect = item.bounds;
+      if (item is PdfCheckBoxField) {
+        fieldDictionary = PdfFieldHelper.getHelper(item).dictionary;
+        isChecked = item.isChecked;
+      }
     } else if (fieldItem != null) {
       value = getItemValue(
         widget!,
@@ -672,18 +678,82 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
         ).crossTable,
       );
       rect = fieldItem.bounds;
+      if (fieldItem is PdfCheckBoxItem) {
+        fieldDictionary =
+            PdfFieldHelper.getHelper(
+              PdfFieldItemHelper.getHelper(fieldItem).field,
+            ).dictionary;
+        isChecked = fieldItem.checked;
+      }
     } else {
       value = getItemValue(widget!, crossTable);
       rect = checkField.bounds;
+      if (checkField is PdfCheckBoxField) {
+        fieldDictionary =
+            PdfFieldHelper.getHelper(checkField as PdfCheckBoxField).dictionary;
+        isChecked = (checkField as PdfCheckBoxField).isChecked;
+      }
     }
-    final String appearanceValue =
-        value == null || value.isEmpty
-            ? PdfDictionaryProperties.yes
-            : value;
-    if ((widget != null) && (widget.containsKey(PdfDictionaryProperties.ap))) {
-      PdfDictionary? appearance =
+    PdfDictionary? appearance;
+    PdfDictionary? normal;
+    if (widget != null && widget.containsKey(PdfDictionaryProperties.ap)) {
+      appearance =
           crossTable!.getObject(widget[PdfDictionaryProperties.ap])
               as PdfDictionary?;
+      if (appearance != null &&
+          appearance.containsKey(PdfDictionaryProperties.n)) {
+        final IPdfPrimitive? holder = PdfCrossTable.dereference(
+          appearance[PdfDictionaryProperties.n],
+        );
+        if (holder is PdfDictionary) {
+          normal = holder;
+        }
+      }
+    }
+    String? appearanceValue = value;
+    if (normal != null && normal.items != null) {
+      for (final PdfName? key in normal.items!.keys) {
+        if (key != null && key.name != PdfDictionaryProperties.off) {
+          appearanceValue = PdfName.decodeName(key.name);
+          break;
+        }
+      }
+    }
+    appearanceValue =
+        appearanceValue == null || appearanceValue.isEmpty
+            ? PdfDictionaryProperties.yes
+            : appearanceValue;
+    if (fieldDictionary != null &&
+        widget != null &&
+        item is! PdfRadioButtonListItem) {
+      if (isChecked) {
+        fieldDictionary.setName(
+          PdfName(PdfDictionaryProperties.v),
+          appearanceValue,
+        );
+        widget.setName(
+          PdfName(PdfDictionaryProperties.usageApplication),
+          appearanceValue,
+        );
+      } else {
+        widget.setName(
+          PdfName(PdfDictionaryProperties.usageApplication),
+          PdfDictionaryProperties.off,
+        );
+        if (fieldDictionary.containsKey(PdfDictionaryProperties.v)) {
+          final IPdfPrimitive? currentValue = PdfCrossTable.dereference(
+            fieldDictionary[PdfDictionaryProperties.v],
+          );
+          if ((currentValue is PdfName &&
+                  PdfName.decodeName(currentValue.name) == appearanceValue) ||
+              (currentValue is PdfString &&
+                  currentValue.value == appearanceValue)) {
+            fieldDictionary.remove(PdfDictionaryProperties.v);
+          }
+        }
+      }
+    }
+    if ((widget != null) && (widget.containsKey(PdfDictionaryProperties.ap))) {
       appearance ??= PdfDictionary();
       if (appearance.containsKey(PdfDictionaryProperties.n)) {
         IPdfPrimitive? holder = PdfCrossTable.dereference(
