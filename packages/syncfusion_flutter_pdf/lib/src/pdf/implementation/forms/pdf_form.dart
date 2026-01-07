@@ -123,6 +123,7 @@ class PdfForm implements IPdfWrapper {
     _helper.needAppearances = value;
     _helper.setAppearanceDictionary = !value;
     _helper._isDefaultAppearance = value;
+    _helper._loadedNeedAppearances = value;
   }
 
   /// Flatten all the fields available in the form.
@@ -243,7 +244,8 @@ class PdfForm implements IPdfWrapper {
               )!
               as PdfBoolean;
       _helper.needAppearances = needAppearance.value;
-      _helper._isDefaultAppearance = needAppearance.value ?? true;
+      _helper._isDefaultAppearance = needAppearance.value ?? false;
+      _helper._loadedNeedAppearances = needAppearance.value;
       _helper.setAppearanceDictionary = true;
       logInitialize(
         'needAppearances value=${needAppearance.value} setAppearanceDictionary=true',
@@ -1004,6 +1006,7 @@ class PdfFormHelper {
   /// internal field
   bool flatten = false;
   bool _isDefaultAppearance = false;
+  bool? _loadedNeedAppearances;
   PdfFormFieldCollection? _fields;
 
   /// internal property
@@ -1156,16 +1159,18 @@ class PdfFormHelper {
         }
         ++i;
       }
-      if (_isDefaultAppearance) {
+      final bool effectiveNeedAppearances =
+          _loadedNeedAppearances ?? _isDefaultAppearance;
+      if (effectiveNeedAppearances) {
         dictionary!.setBoolean(
           PdfDictionaryProperties.needAppearances,
-          _isDefaultAppearance,
+          true,
         );
-      } else if (!_isDefaultAppearance &&
+      } else if (!effectiveNeedAppearances &&
           dictionary!.containsKey(PdfDictionaryProperties.needAppearances)) {
         dictionary!.setBoolean(
           PdfDictionaryProperties.needAppearances,
-          _isDefaultAppearance,
+          false,
         );
       }
       dictionary!.remove('XFA');
