@@ -1078,7 +1078,14 @@ class PdfFormHelper {
           );
         }
       }
+      final bool? lockedNeedAppearances =
+          (setAppearanceDictionary && needAppearances == false)
+              ? needAppearances
+              : null;
       while (i < form.fields.count) {
+        if (lockedNeedAppearances != null) {
+          needAppearances = lockedNeedAppearances;
+        }
         final PdfField field = form.fields[i];
         if (field is PdfSignatureField) {
           needAppearances = false;

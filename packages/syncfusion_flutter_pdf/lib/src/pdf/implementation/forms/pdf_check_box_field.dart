@@ -723,6 +723,13 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
         appearanceValue == null || appearanceValue.isEmpty
             ? PdfDictionaryProperties.yes
             : appearanceValue;
+    final PdfForm? form = checkField.form;
+    final PdfFormHelper? formHelper =
+        form != null ? PdfFormHelper.getHelper(form) : null;
+    final bool forceRebuild =
+        formHelper != null &&
+        formHelper.setAppearanceDictionary &&
+        formHelper.needAppearances == false;
     if (fieldDictionary != null &&
         widget != null &&
         item is! PdfRadioButtonListItem) {
@@ -761,6 +768,7 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
         );
         PdfDictionary? normal = holder as PdfDictionary?;
         if (fieldChanged == true ||
+            forceRebuild ||
             normal == null ||
             !normal.containsKey(appearanceValue)) {
           normal = PdfDictionary();
@@ -800,6 +808,7 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
         );
         PdfDictionary? pressed = holder as PdfDictionary?;
         if (fieldChanged == true ||
+            forceRebuild ||
             pressed == null ||
             !pressed.containsKey(appearanceValue)) {
           pressed = PdfDictionary();

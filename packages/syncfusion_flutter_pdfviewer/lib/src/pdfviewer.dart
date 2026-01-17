@@ -2237,7 +2237,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
 
       // Set the default appearance for the form.
       _trace('_saveDocument setDefaultAppearance');
-      // _document!.form.setDefaultAppearance(false);
+      _document!.form.setDefaultAppearance(false);
 
       // Flatten the form fields if the PdfFlattenOption is enabled.
       if (_pdfViewerController._flattenOption == PdfFlattenOption.formFields) {

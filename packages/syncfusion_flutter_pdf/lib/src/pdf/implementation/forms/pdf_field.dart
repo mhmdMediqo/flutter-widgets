@@ -539,6 +539,15 @@ abstract class PdfField implements IPdfWrapper {
   }
 
   PdfPage? _getLoadedPage() {
+    // void _logResolvePage(String message) {
+    //   // Use print to keep dependency-free logging for debugging page resolution.
+    //   // ignore: avoid_print
+    //   print('[PdfField] $message');
+    // }
+
+    // _logResolvePage(
+    //   '_getLoadedPage start name=${_fieldHelper.name} pageIsNull=${_fieldHelper.page == null} isLoadedField=${_fieldHelper.isLoadedField} hasCrossTable=${_fieldHelper.crossTable != null}',
+    // );
     PdfPage? page = _fieldHelper.page;
     if (page == null ||
         (PdfPageHelper.getHelper(page).isLoadedPage) &&
@@ -551,13 +560,18 @@ abstract class PdfField implements IPdfWrapper {
       if (widget.containsKey(PdfDictionaryProperties.p) &&
           PdfCrossTable.dereference(widget[PdfDictionaryProperties.p])
               is! PdfNull) {
+        // _logResolvePage('_getLoadedPage widget has /P reference');
         final IPdfPrimitive? pageRef = _fieldHelper.crossTable!.getObject(
           widget[PdfDictionaryProperties.p],
         );
         if (pageRef != null && pageRef is PdfDictionary) {
           page = PdfPageCollectionHelper.getHelper(doc!.pages).getPage(pageRef);
+          // _logResolvePage(
+          //   '_getLoadedPage resolved via /P reference to page index=${page != null ? doc.pages.indexOf(page) : -1}',
+          // );
         }
       } else {
+        // _logResolvePage('_getLoadedPage scanning pages for widget reference');
         final PdfReference widgetReference = _fieldHelper.crossTable!
             .getReference(widget);
         for (int j = 0; j < doc!.pages.count; j++) {
@@ -573,6 +587,9 @@ abstract class PdfField implements IPdfWrapper {
                 if (holder.reference!.objNum == widgetReference.objNum &&
                     holder.reference!.genNum == widgetReference.genNum) {
                   page = loadedPage;
+                  // _logResolvePage(
+                  //   '_getLoadedPage matched widget reference on page index=$j',
+                  // );
                   return page;
                 } else if (_fieldHelper.requiredReference != null &&
                     _fieldHelper.requiredReference!.reference != null &&
@@ -581,6 +598,9 @@ abstract class PdfField implements IPdfWrapper {
                     _fieldHelper.requiredReference!.reference!.genNum ==
                         holder.reference!.genNum) {
                   page = loadedPage;
+                  // _logResolvePage(
+                  //   '_getLoadedPage matched requiredReference on page index=$j',
+                  // );
                   return page;
                 }
               }
@@ -603,6 +623,9 @@ abstract class PdfField implements IPdfWrapper {
             .tabs] = PdfName(' ');
       }
     }
+    // _logResolvePage(
+    //   '_getLoadedPage end pageIndex=${page != null ? _fieldHelper.crossTable?.document?.pages.indexOf(page) : -1}',
+    // );
     return page;
   }
 
