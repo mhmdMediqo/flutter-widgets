@@ -2297,9 +2297,10 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       // Update the annotations in the document
       _updateAnnotations();
 
-      // Set the default appearance for the form.
-      _trace('_saveDocument setDefaultAppearance');
-      _document!.form.setDefaultAppearance(false);
+      // Force NeedAppearances=true so Acrobat regenerates widget appearances
+      // when /AP is missing or incomplete (common in some source PDFs).
+      _trace('_saveDocument setDefaultAppearance(true)');
+      _document!.form.setDefaultAppearance(true);
 
       // Flatten the form fields if the PdfFlattenOption is enabled.
       if (_pdfViewerController._flattenOption == PdfFlattenOption.formFields) {
