@@ -2223,12 +2223,74 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
     return textLines;
   }
 
+  void _syncFormFieldsForSave() {
+    if (_pdfViewerController._formFields.isEmpty) {
+      return;
+    }
+    for (final PdfFormField formField in _pdfViewerController._formFields) {
+      if (formField.readOnly) {
+        continue;
+      }
+      final PdfFormFieldHelper helper = PdfFormFieldHelper.getHelper(formField);
+      if (helper is PdfTextFormFieldHelper &&
+          formField is PdfTextFormField) {
+        final String currentText = helper.textEditingController.text;
+        if (helper.pdfTextField.text != currentText) {
+          helper.setTextBoxValue(currentText);
+        }
+      } else if (helper is PdfCheckboxFormFieldHelper &&
+          formField is PdfCheckboxFormField) {
+        final bool desired = formField.isChecked;
+        if (helper.pdfCheckBoxItem != null) {
+          if (helper.pdfCheckBoxItem!.checked != desired) {
+            helper.setCheckboxValue(desired);
+          }
+        } else if (helper.pdfCheckboxField.isChecked != desired) {
+          helper.setCheckboxValue(desired);
+        }
+      } else if (helper is PdfRadioFormFieldHelper &&
+          formField is PdfRadioFormField) {
+        final String desired = formField.selectedItem;
+        final int currentIndex = helper.pdfRadioField.selectedIndex;
+        final String currentValue =
+            currentIndex != -1
+                ? helper.pdfRadioField.items[currentIndex].value
+                : '';
+        if (currentValue != desired) {
+          helper.setRadioButtonValue(desired);
+        }
+      } else if (helper is PdfComboBoxFormFieldHelper &&
+          formField is PdfComboBoxFormField) {
+        final String desired = formField.selectedItem;
+        if (helper.pdfComboBoxField.selectedValue != desired) {
+          helper.setComboBoxValue(desired);
+        }
+      } else if (helper is PdfListBoxFormFieldHelper &&
+          formField is PdfListBoxFormField) {
+        final List<String> desired = formField.selectedItems ?? <String>[];
+        if (!listEquals(helper.pdfListBoxField.selectedValues, desired)) {
+          helper.setListBoxValue(desired);
+        }
+      } else if (helper is PdfSignatureFormFieldHelper &&
+          formField is PdfSignatureFormField) {
+        if (!listEquals(
+          formField.signature,
+          helper.signatureFormField.signature,
+        )) {
+          helper.setSignature(formField.signature);
+        }
+      }
+    }
+  }
+
   /// Save the PDF document with the modified data and returns the data bytes.
   Future<List<int>> _saveDocument() async {
     _trace(
       '_saveDocument start flattenOption=${_pdfViewerController._flattenOption} isSignatureSaved=$_isSignatureSaved documentNull=${_document == null}',
     );
     try {
+      _syncFormFieldsForSave();
+
       // Update the signature form fields data
       _updateSignatureFormFields();
 
@@ -5936,6 +5998,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       }
     } else if (property == 'exportFormData') {
       if (_document != null) {
+        _syncFormFieldsForSave();
         _pdfViewerController._exportedFormDataBytes = _document!.form
             .exportData(_pdfViewerController._exportDataFormat);
         setState(() {});
