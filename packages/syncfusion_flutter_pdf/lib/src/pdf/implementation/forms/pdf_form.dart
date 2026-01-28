@@ -1470,17 +1470,19 @@ class PdfFormHelper {
 
   /// internal method
   String? getCorrectName(String? name) {
-    String? correctName = name;
+    if (name == null || name.isEmpty) {
+      return name;
+    }
     if (fieldNames.contains(name)) {
       final int firstIndex = fieldNames.indexOf(name);
       final int lastIndex = fieldNames.lastIndexOf(name);
       if (firstIndex != lastIndex) {
-        correctName = PdfResources.globallyUniqueIdentifier;
-        fieldNames.removeAt(lastIndex);
-        fieldNames.add(correctName);
+        // Do not auto-generate a new name when duplicates are found.
+        // Returning null skips setting /T for this field.
+        return null;
       }
     }
-    return correctName;
+    return name;
   }
 
   /// internal method

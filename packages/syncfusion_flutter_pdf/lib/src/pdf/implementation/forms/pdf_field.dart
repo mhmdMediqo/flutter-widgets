@@ -1395,6 +1395,9 @@ class PdfFieldHelper {
 
   /// internal method
   void applyName(String? name) {
+    if (name == null || name.isEmpty) {
+      return;
+    }
     if (isLoadedField) {
       _setName(name);
     } else {

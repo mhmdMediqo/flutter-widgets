@@ -161,26 +161,40 @@ class PdfCheckBoxField extends PdfCheckFieldBase {
       }
     }
 
-    /// test
     if (_checked != value) {
       _checked = value;
       String? val;
       if (_helper.isLoadedField) {
         val = _helper._enableCheckBox(value);
-        _helper._enableItems(value, val);
+        val = _helper._enableItems(value, val);
         if (value) {
-          // Force a consistent on-state name so /V and /AS always use /On.
-          val = PdfDictionaryProperties.on;
+          final PdfDictionary widget = _helper.getWidgetAnnotation(
+            _helper.dictionary!,
+            _helper.crossTable,
+          );
+          String? onState = _helper._resolveOnStateName(widget);
+          if (onState == null &&
+              _helper.checkBoxField.items != null &&
+              _helper.checkBoxField.items!.count > 0) {
+            final PdfDictionary? itemWidget =
+                PdfFieldItemHelper.getHelper(
+                  _helper.checkBoxField.items![_helper.defaultIndex],
+                ).dictionary;
+            if (itemWidget != null) {
+              onState = _helper._resolveOnStateName(itemWidget);
+            }
+          }
+          val = onState ?? val;
         }
       }
       if (_checked) {
         _helper.dictionary!.setName(
           PdfName(PdfDictionaryProperties.v),
-          val ?? PdfDictionaryProperties.on,
+          val ?? PdfDictionaryProperties.yes,
         );
         _helper.dictionary!.setProperty(
           PdfDictionaryProperties.usageApplication,
-          PdfName(val ?? PdfDictionaryProperties.on),
+          PdfName(val ?? PdfDictionaryProperties.yes),
         );
       } else {
         _helper.dictionary!.remove(PdfDictionaryProperties.v);
@@ -287,6 +301,46 @@ class PdfCheckBoxFieldHelper extends PdfCheckFieldBaseHelper {
       }
     }
     return value;
+  }
+
+  String? _resolveOnStateName(PdfDictionary? widget) {
+    if (widget == null || crossTable == null) {
+      return null;
+    }
+    if (widget.containsKey(PdfDictionaryProperties.usageApplication)) {
+      final IPdfPrimitive? state = PdfCrossTable.dereference(
+        widget[PdfDictionaryProperties.usageApplication],
+      );
+      if (state is PdfName &&
+          state.name != PdfDictionaryProperties.off &&
+          state.name!.isNotEmpty) {
+        return PdfName.decodeName(state.name);
+      } else if (state is PdfString &&
+          state.value != null &&
+          state.value!.isNotEmpty &&
+          state.value != PdfDictionaryProperties.off) {
+        return state.value;
+      }
+    }
+    if (widget.containsKey(PdfDictionaryProperties.ap)) {
+      final PdfDictionary? appearance =
+          crossTable!.getObject(widget[PdfDictionaryProperties.ap])
+              as PdfDictionary?;
+      if (appearance != null &&
+          appearance.containsKey(PdfDictionaryProperties.n)) {
+        final IPdfPrimitive? holder = PdfCrossTable.dereference(
+          appearance[PdfDictionaryProperties.n],
+        );
+        if (holder is PdfDictionary) {
+          for (final PdfName? key in holder.items!.keys) {
+            if (key != null && key.name != PdfDictionaryProperties.off) {
+              return PdfName.decodeName(key.name);
+            }
+          }
+        }
+      }
+    }
+    return getItemValue(widget, crossTable);
   }
 
   /// internal method
