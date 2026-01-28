@@ -169,18 +169,18 @@ class PdfCheckBoxField extends PdfCheckFieldBase {
         val = _helper._enableCheckBox(value);
         _helper._enableItems(value, val);
         if (value) {
-          // Force a consistent on-state name so /V and /AS always use /Yes.
-          val = PdfDictionaryProperties.yes;
+          // Force a consistent on-state name so /V and /AS always use /On.
+          val = PdfDictionaryProperties.on;
         }
       }
       if (_checked) {
         _helper.dictionary!.setName(
           PdfName(PdfDictionaryProperties.v),
-          val ?? PdfDictionaryProperties.yes,
+          val ?? PdfDictionaryProperties.on,
         );
         _helper.dictionary!.setProperty(
           PdfDictionaryProperties.usageApplication,
-          PdfName(val ?? PdfDictionaryProperties.yes),
+          PdfName(val ?? PdfDictionaryProperties.on),
         );
       } else {
         _helper.dictionary!.remove(PdfDictionaryProperties.v);

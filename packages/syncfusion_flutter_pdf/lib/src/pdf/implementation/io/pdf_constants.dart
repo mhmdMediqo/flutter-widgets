@@ -717,6 +717,9 @@ class PdfDictionaryProperties {
   static const String yes = 'Yes';
 
   /// internal field
+  static const String on = 'On';
+
+  /// internal field
   static const String off = 'Off';
 
   /// internal field
