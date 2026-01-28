@@ -160,12 +160,18 @@ class PdfCheckBoxField extends PdfCheckFieldBase {
         _helper.changed = true;
       }
     }
+
+    /// test
     if (_checked != value) {
       _checked = value;
       String? val;
       if (_helper.isLoadedField) {
         val = _helper._enableCheckBox(value);
-        val = _helper._enableItems(value, val);
+        _helper._enableItems(value, val);
+        if (value) {
+          // Force a consistent on-state name so /V and /AS always use /Yes.
+          val = PdfDictionaryProperties.yes;
+        }
       }
       if (_checked) {
         _helper.dictionary!.setName(
@@ -723,6 +729,23 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
         appearanceValue == null || appearanceValue.isEmpty
             ? PdfDictionaryProperties.yes
             : appearanceValue;
+    String? appearanceState;
+    if (widget != null &&
+        widget.containsKey(PdfDictionaryProperties.usageApplication)) {
+      final IPdfPrimitive? state = PdfCrossTable.dereference(
+        widget[PdfDictionaryProperties.usageApplication],
+      );
+      if (state is PdfName) {
+        appearanceState = PdfName.decodeName(state.name);
+      } else if (state is PdfString) {
+        appearanceState = state.value;
+      }
+    }
+    if (appearanceState != null &&
+        appearanceState.isNotEmpty &&
+        appearanceState != PdfDictionaryProperties.off) {
+      appearanceValue = appearanceState;
+    }
     final PdfForm? form = checkField.form;
     final PdfFormHelper? formHelper =
         form != null ? PdfFormHelper.getHelper(form) : null;
@@ -767,10 +790,34 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
           appearance[PdfDictionaryProperties.n],
         );
         PdfDictionary? normal = holder as PdfDictionary?;
+        bool hasMatchingAppearance =
+            normal != null && normal.containsKey(appearanceValue);
+        if (!hasMatchingAppearance &&
+            appearanceValue != PdfDictionaryProperties.off &&
+            normal != null &&
+            normal.items != null) {
+          PdfName? onKey;
+          normal.items!.forEach((PdfName? key, IPdfPrimitive? value) {
+            if (onKey == null &&
+                key != null &&
+                key.name != PdfDictionaryProperties.off) {
+              onKey = key;
+            }
+          });
+          final IPdfPrimitive? onAppearance =
+              onKey != null ? normal.items![onKey] : null;
+          if (onAppearance != null) {
+            normal.setProperty(appearanceValue, onAppearance);
+            hasMatchingAppearance = true;
+          }
+        }
+        final bool hasOffAppearance =
+            normal != null && normal.containsKey(PdfDictionaryProperties.off);
         if (fieldChanged == true ||
             forceRebuild ||
             normal == null ||
-            !normal.containsKey(appearanceValue)) {
+            !hasMatchingAppearance ||
+            !hasOffAppearance) {
           normal = PdfDictionary();
           final PdfTemplate checkedTemplate = PdfTemplate(
             rect.width,
@@ -845,7 +892,10 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
         }
       } else {
         final PdfDictionary normal = PdfDictionary();
-        final PdfTemplate checkedTemplate = PdfTemplate(rect.width, rect.height);
+        final PdfTemplate checkedTemplate = PdfTemplate(
+          rect.width,
+          rect.height,
+        );
         final PdfTemplate unchekedTemplate = PdfTemplate(
           rect.width,
           rect.height,
@@ -920,10 +970,7 @@ class PdfCheckFieldBaseHelper extends PdfFieldHelper {
         item,
         fieldItem,
       );
-      normal.setProperty(
-        appearanceValue,
-        PdfReferenceHolder(checkedTemplate),
-      );
+      normal.setProperty(appearanceValue, PdfReferenceHolder(checkedTemplate));
       normal.setProperty(
         PdfDictionaryProperties.off,
         PdfReferenceHolder(unchekedTemplate),
