@@ -2240,7 +2240,8 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       } else if (helper is PdfCheckboxFormFieldHelper &&
           formField is PdfCheckboxFormField) {
         final bool desired = formField.isChecked;
-        checkboxValues[formField.name] = desired;
+        checkboxValues[formField.name] =
+            (checkboxValues[formField.name] ?? false) || desired;
         if (helper.pdfCheckBoxItem != null) {
           if (helper.pdfCheckBoxItem!.checked != desired) {
             helper.setCheckboxValue(desired);
@@ -2283,6 +2284,15 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
     }
     if (checkboxValues.isEmpty || _document == null) {
       return;
+    }
+    // Also consider the current document state: if any widget is ON, make all
+    // widgets with the same /T ON during export.
+    for (int i = 0; i < _document!.form.fields.count; i++) {
+      final PdfField field = _document!.form.fields[i];
+      if (field is PdfCheckBoxField && field.name != null) {
+        checkboxValues[field.name!] =
+            (checkboxValues[field.name!] ?? false) || field.isChecked;
+      }
     }
     for (int i = 0; i < _document!.form.fields.count; i++) {
       final PdfField field = _document!.form.fields[i];
