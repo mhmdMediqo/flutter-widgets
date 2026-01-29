@@ -2225,6 +2225,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
     if (_pdfViewerController._formFields.isEmpty) {
       return;
     }
+    final Map<String, bool> checkboxValues = <String, bool>{};
     for (final PdfFormField formField in _pdfViewerController._formFields) {
       if (formField.readOnly) {
         continue;
@@ -2239,6 +2240,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       } else if (helper is PdfCheckboxFormFieldHelper &&
           formField is PdfCheckboxFormField) {
         final bool desired = formField.isChecked;
+        checkboxValues[formField.name] = desired;
         if (helper.pdfCheckBoxItem != null) {
           if (helper.pdfCheckBoxItem!.checked != desired) {
             helper.setCheckboxValue(desired);
@@ -2276,6 +2278,18 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
           helper.signatureFormField.signature,
         )) {
           helper.setSignature(formField.signature);
+        }
+      }
+    }
+    if (checkboxValues.isEmpty || _document == null) {
+      return;
+    }
+    for (int i = 0; i < _document!.form.fields.count; i++) {
+      final PdfField field = _document!.form.fields[i];
+      if (field is PdfCheckBoxField && field.name != null) {
+        final bool? desired = checkboxValues[field.name!];
+        if (desired != null && field.isChecked != desired) {
+          field.isChecked = desired;
         }
       }
     }
