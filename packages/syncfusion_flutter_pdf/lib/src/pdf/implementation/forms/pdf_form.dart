@@ -959,6 +959,237 @@ class PdfForm implements IPdfWrapper {
     builder.element('Fields', nest: elements);
     return utf8.encode(builder.buildDocument().toXmlString(pretty: true));
   }
+
+  /// Normalizes checkbox widgets so all widgets with the same /T are ON
+  /// if any widget is ON, and keeps /V and /AS consistent with /AP.
+  void normalizeCheckboxWidgets() {
+    final PdfCrossTable? crossTable = _helper.crossTable;
+    final PdfDocument? document = crossTable?.document;
+    if (crossTable == null || document == null) {
+      return;
+    }
+
+    final Map<String, List<PdfDictionary>> widgetsByName =
+        <String, List<PdfDictionary>>{};
+    final Map<String, bool> anyOnByName = <String, bool>{};
+    final Map<PdfDictionary, String?> widgetOnState =
+        <PdfDictionary, String?>{};
+
+    for (int pageIndex = 0; pageIndex < document.pages.count; pageIndex++) {
+      final PdfPage page = document.pages[pageIndex];
+      final PdfAnnotationCollection annotations = page.annotations;
+      for (int i = 0; i < annotations.count; i++) {
+        final PdfAnnotation annotation = annotations[i];
+        final PdfAnnotationHelper annHelper =
+            PdfAnnotationHelper.getHelper(annotation);
+        final PdfDictionary? dictionary = annHelper.dictionary;
+        final PdfCrossTable? annCrossTable = annHelper.crossTable;
+        if (dictionary == null || annCrossTable == null) {
+          continue;
+        }
+        if (!_isCheckboxWidget(dictionary, annCrossTable)) {
+          continue;
+        }
+        final String? fieldName = _getWidgetFieldName(
+          dictionary,
+          annCrossTable,
+        );
+        if (fieldName == null || fieldName.isEmpty) {
+          continue;
+        }
+        final bool isOn = _isWidgetOn(dictionary, annCrossTable);
+        anyOnByName[fieldName] = (anyOnByName[fieldName] ?? false) || isOn;
+        widgetsByName.putIfAbsent(fieldName, () => <PdfDictionary>[]);
+        widgetsByName[fieldName]!.add(dictionary);
+        widgetOnState[dictionary] = _resolveWidgetOnState(
+          dictionary,
+          annCrossTable,
+        );
+      }
+    }
+
+    if (widgetsByName.isEmpty) {
+      return;
+    }
+
+    widgetsByName.forEach((String name, List<PdfDictionary> widgets) {
+      final bool anyOn = anyOnByName[name] ?? false;
+      if (!anyOn) {
+        return;
+      }
+      for (final PdfDictionary widget in widgets) {
+        final String resolved =
+            widgetOnState[widget] ??
+            _resolveOnStateFromAppearance(widget, crossTable) ??
+            PdfDictionaryProperties.on;
+        widget.setName(
+          PdfName(PdfDictionaryProperties.usageApplication),
+          resolved,
+        );
+        widget.setName(PdfName(PdfDictionaryProperties.v), resolved);
+        final PdfDictionary? parent = _getParentDictionary(widget, crossTable);
+        if (parent != null) {
+          parent.setName(PdfName(PdfDictionaryProperties.v), resolved);
+        }
+      }
+    });
+  }
+
+  bool _isCheckboxWidget(PdfDictionary dictionary, PdfCrossTable crossTable) {
+    final String? subtype = _getPdfNameValue(
+      dictionary[PdfDictionaryProperties.subtype],
+      crossTable,
+    );
+    if (subtype != PdfDictionaryProperties.widget) {
+      return false;
+    }
+    final String? fieldType = _getPdfNameValue(
+      dictionary[PdfDictionaryProperties.ft],
+      crossTable,
+    );
+    if (fieldType != PdfDictionaryProperties.btn) {
+      return false;
+    }
+    final int? flags = _getPdfIntValue(
+      dictionary[PdfDictionaryProperties.fieldFlags],
+      crossTable,
+    );
+    // Skip radio buttons (bit 15 set).
+    if (flags != null && (flags & 32768) != 0) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _isWidgetOn(PdfDictionary dictionary, PdfCrossTable crossTable) {
+    final String? asValue = _getPdfNameOrStringValue(
+      dictionary[PdfDictionaryProperties.usageApplication],
+      crossTable,
+    );
+    if (asValue != null && asValue != PdfDictionaryProperties.off) {
+      return true;
+    }
+    final String? vValue = _getPdfNameOrStringValue(
+      dictionary[PdfDictionaryProperties.v],
+      crossTable,
+    );
+    return vValue != null && vValue != PdfDictionaryProperties.off;
+  }
+
+  String? _resolveWidgetOnState(
+    PdfDictionary dictionary,
+    PdfCrossTable crossTable,
+  ) {
+    final String? asValue = _getPdfNameOrStringValue(
+      dictionary[PdfDictionaryProperties.usageApplication],
+      crossTable,
+    );
+    if (asValue != null && asValue != PdfDictionaryProperties.off) {
+      return asValue;
+    }
+    final String? vValue = _getPdfNameOrStringValue(
+      dictionary[PdfDictionaryProperties.v],
+      crossTable,
+    );
+    if (vValue != null && vValue != PdfDictionaryProperties.off) {
+      return vValue;
+    }
+    return _resolveOnStateFromAppearance(dictionary, crossTable);
+  }
+
+  String? _resolveOnStateFromAppearance(
+    PdfDictionary dictionary,
+    PdfCrossTable crossTable,
+  ) {
+    final IPdfPrimitive? ap = PdfCrossTable.dereference(
+      dictionary[PdfDictionaryProperties.ap],
+    );
+    if (ap is PdfDictionary) {
+      final IPdfPrimitive? normal = PdfCrossTable.dereference(
+        ap[PdfDictionaryProperties.n],
+      );
+      if (normal is PdfDictionary && normal.items != null) {
+        for (final PdfName? key in normal.items!.keys) {
+          if (key != null && key.name != PdfDictionaryProperties.off) {
+            return PdfName.decodeName(key.name);
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  String? _getWidgetFieldName(
+    PdfDictionary dictionary,
+    PdfCrossTable crossTable,
+  ) {
+    final String? direct = _getPdfStringValue(
+      dictionary[PdfDictionaryProperties.t],
+      crossTable,
+    );
+    if (direct != null && direct.isNotEmpty) {
+      return direct;
+    }
+    final PdfDictionary? parent = _getParentDictionary(dictionary, crossTable);
+    if (parent == null) {
+      return null;
+    }
+    return _getPdfStringValue(parent[PdfDictionaryProperties.t], crossTable);
+  }
+
+  PdfDictionary? _getParentDictionary(
+    PdfDictionary dictionary,
+    PdfCrossTable crossTable,
+  ) {
+    if (!dictionary.containsKey(PdfDictionaryProperties.parent)) {
+      return null;
+    }
+    final IPdfPrimitive? parent = PdfCrossTable.dereference(
+      dictionary[PdfDictionaryProperties.parent],
+    );
+    return parent is PdfDictionary ? parent : null;
+  }
+
+  String? _getPdfNameValue(IPdfPrimitive? primitive, PdfCrossTable crossTable) {
+    final IPdfPrimitive? deref = PdfCrossTable.dereference(primitive);
+    if (deref is PdfName) {
+      return PdfName.decodeName(deref.name);
+    }
+    return null;
+  }
+
+  String? _getPdfStringValue(
+    IPdfPrimitive? primitive,
+    PdfCrossTable crossTable,
+  ) {
+    final IPdfPrimitive? deref = PdfCrossTable.dereference(primitive);
+    if (deref is PdfString) {
+      return deref.value;
+    }
+    return null;
+  }
+
+  String? _getPdfNameOrStringValue(
+    IPdfPrimitive? primitive,
+    PdfCrossTable crossTable,
+  ) {
+    final IPdfPrimitive? deref = PdfCrossTable.dereference(primitive);
+    if (deref is PdfName) {
+      return PdfName.decodeName(deref.name);
+    }
+    if (deref is PdfString) {
+      return deref.value;
+    }
+    return null;
+  }
+
+  int? _getPdfIntValue(IPdfPrimitive? primitive, PdfCrossTable crossTable) {
+    final IPdfPrimitive? deref = PdfCrossTable.dereference(primitive);
+    if (deref is PdfNumber) {
+      return deref.value?.toInt();
+    }
+    return null;
+  }
 }
 
 /// [PdfForm] helper
@@ -1171,16 +1402,10 @@ class PdfFormHelper {
       final bool effectiveNeedAppearances =
           _loadedNeedAppearances ?? _isDefaultAppearance;
       if (effectiveNeedAppearances) {
-        dictionary!.setBoolean(
-          PdfDictionaryProperties.needAppearances,
-          true,
-        );
+        dictionary!.setBoolean(PdfDictionaryProperties.needAppearances, true);
       } else if (!effectiveNeedAppearances &&
           dictionary!.containsKey(PdfDictionaryProperties.needAppearances)) {
-        dictionary!.setBoolean(
-          PdfDictionaryProperties.needAppearances,
-          false,
-        );
+        dictionary!.setBoolean(PdfDictionaryProperties.needAppearances, false);
       }
       dictionary!.remove('XFA');
     }
@@ -1569,245 +1794,6 @@ class PdfFormHelper {
     return value;
   }
 
-  /// Normalizes checkbox widgets so all widgets with the same /T are ON
-  /// if any widget is ON, and keeps /V and /AS consistent with /AP.
-  void normalizeCheckboxWidgets() {
-    final PdfCrossTable? crossTable = _helper.crossTable;
-    final PdfDocument? document = crossTable?.document;
-    if (crossTable == null || document == null) {
-      return;
-    }
-
-    final Map<String, List<PdfDictionary>> widgetsByName =
-        <String, List<PdfDictionary>>{};
-    final Map<String, bool> anyOnByName = <String, bool>{};
-    final Map<PdfDictionary, String?> widgetOnState =
-        <PdfDictionary, String?>{};
-
-    for (int pageIndex = 0; pageIndex < document.pages.count; pageIndex++) {
-      final PdfPage page = document.pages[pageIndex];
-      final PdfAnnotationCollection annotations = page.annotations;
-      for (int i = 0; i < annotations.count; i++) {
-        final PdfAnnotation annotation = annotations[i];
-        final PdfAnnotationHelper annHelper =
-            PdfAnnotationHelper.getHelper(annotation);
-        final PdfDictionary? dictionary = annHelper.dictionary;
-        final PdfCrossTable? annCrossTable = annHelper.crossTable;
-        if (dictionary == null || annCrossTable == null) {
-          continue;
-        }
-        if (!_isCheckboxWidget(dictionary, annCrossTable)) {
-          continue;
-        }
-        final String? fieldName = _getWidgetFieldName(
-          dictionary,
-          annCrossTable,
-        );
-        if (fieldName == null || fieldName.isEmpty) {
-          continue;
-        }
-        final bool isOn = _isWidgetOn(dictionary, annCrossTable);
-        anyOnByName[fieldName] = (anyOnByName[fieldName] ?? false) || isOn;
-        widgetsByName.putIfAbsent(fieldName, () => <PdfDictionary>[]);
-        widgetsByName[fieldName]!.add(dictionary);
-        widgetOnState[dictionary] = _resolveWidgetOnState(
-          dictionary,
-          annCrossTable,
-        );
-      }
-    }
-
-    if (widgetsByName.isEmpty) {
-      return;
-    }
-
-    widgetsByName.forEach((String name, List<PdfDictionary> widgets) {
-      final bool anyOn = anyOnByName[name] ?? false;
-      if (!anyOn) {
-        return;
-      }
-      for (final PdfDictionary widget in widgets) {
-        final String resolved =
-            widgetOnState[widget] ??
-            _resolveOnStateFromAppearance(widget, crossTable) ??
-            PdfDictionaryProperties.on;
-        widget.setName(
-          PdfName(PdfDictionaryProperties.usageApplication),
-          resolved,
-        );
-        widget.setName(PdfName(PdfDictionaryProperties.v), resolved);
-        final PdfDictionary? parent =
-            _getParentDictionary(widget, crossTable);
-        if (parent != null) {
-          parent.setName(PdfName(PdfDictionaryProperties.v), resolved);
-        }
-      }
-    });
-  }
-
-  bool _isCheckboxWidget(
-    PdfDictionary dictionary,
-    PdfCrossTable crossTable,
-  ) {
-    final String? subtype = _getPdfNameValue(
-      dictionary[PdfDictionaryProperties.subtype],
-      crossTable,
-    );
-    if (subtype != PdfDictionaryProperties.widget) {
-      return false;
-    }
-    final String? fieldType = _getPdfNameValue(
-      dictionary[PdfDictionaryProperties.ft],
-      crossTable,
-    );
-    if (fieldType != PdfDictionaryProperties.btn) {
-      return false;
-    }
-    final int? flags = _getPdfIntValue(
-      dictionary[PdfDictionaryProperties.ff],
-      crossTable,
-    );
-    // Skip radio buttons (bit 15 set).
-    if (flags != null && (flags & 32768) != 0) {
-      return false;
-    }
-    return true;
-  }
-
-  bool _isWidgetOn(PdfDictionary dictionary, PdfCrossTable crossTable) {
-    final String? asValue = _getPdfNameOrStringValue(
-      dictionary[PdfDictionaryProperties.usageApplication],
-      crossTable,
-    );
-    if (asValue != null && asValue != PdfDictionaryProperties.off) {
-      return true;
-    }
-    final String? vValue = _getPdfNameOrStringValue(
-      dictionary[PdfDictionaryProperties.v],
-      crossTable,
-    );
-    return vValue != null && vValue != PdfDictionaryProperties.off;
-  }
-
-  String? _resolveWidgetOnState(
-    PdfDictionary dictionary,
-    PdfCrossTable crossTable,
-  ) {
-    final String? asValue = _getPdfNameOrStringValue(
-      dictionary[PdfDictionaryProperties.usageApplication],
-      crossTable,
-    );
-    if (asValue != null && asValue != PdfDictionaryProperties.off) {
-      return asValue;
-    }
-    final String? vValue = _getPdfNameOrStringValue(
-      dictionary[PdfDictionaryProperties.v],
-      crossTable,
-    );
-    if (vValue != null && vValue != PdfDictionaryProperties.off) {
-      return vValue;
-    }
-    return _resolveOnStateFromAppearance(dictionary, crossTable);
-  }
-
-  String? _resolveOnStateFromAppearance(
-    PdfDictionary dictionary,
-    PdfCrossTable crossTable,
-  ) {
-    final IPdfPrimitive? ap = PdfCrossTable.dereference(
-      dictionary[PdfDictionaryProperties.ap],
-    );
-    if (ap is PdfDictionary) {
-      final IPdfPrimitive? normal = PdfCrossTable.dereference(
-        ap[PdfDictionaryProperties.n],
-      );
-      if (normal is PdfDictionary && normal.items != null) {
-        for (final PdfName? key in normal.items!.keys) {
-          if (key != null && key.name != PdfDictionaryProperties.off) {
-            return PdfName.decodeName(key.name);
-          }
-        }
-      }
-    }
-    return null;
-  }
-
-  String? _getWidgetFieldName(
-    PdfDictionary dictionary,
-    PdfCrossTable crossTable,
-  ) {
-    final String? direct = _getPdfStringValue(
-      dictionary[PdfDictionaryProperties.t],
-      crossTable,
-    );
-    if (direct != null && direct.isNotEmpty) {
-      return direct;
-    }
-    final PdfDictionary? parent = _getParentDictionary(dictionary, crossTable);
-    if (parent == null) {
-      return null;
-    }
-    return _getPdfStringValue(parent[PdfDictionaryProperties.t], crossTable);
-  }
-
-  PdfDictionary? _getParentDictionary(
-    PdfDictionary dictionary,
-    PdfCrossTable crossTable,
-  ) {
-    if (!dictionary.containsKey(PdfDictionaryProperties.parent)) {
-      return null;
-    }
-    final IPdfPrimitive? parent =
-        PdfCrossTable.dereference(dictionary[PdfDictionaryProperties.parent]);
-    return parent is PdfDictionary ? parent : null;
-  }
-
-  String? _getPdfNameValue(
-    IPdfPrimitive? primitive,
-    PdfCrossTable crossTable,
-  ) {
-    final IPdfPrimitive? deref = PdfCrossTable.dereference(primitive);
-    if (deref is PdfName) {
-      return PdfName.decodeName(deref.name);
-    }
-    return null;
-  }
-
-  String? _getPdfStringValue(
-    IPdfPrimitive? primitive,
-    PdfCrossTable crossTable,
-  ) {
-    final IPdfPrimitive? deref = PdfCrossTable.dereference(primitive);
-    if (deref is PdfString) {
-      return deref.value;
-    }
-    return null;
-  }
-
-  String? _getPdfNameOrStringValue(
-    IPdfPrimitive? primitive,
-    PdfCrossTable crossTable,
-  ) {
-    final IPdfPrimitive? deref = PdfCrossTable.dereference(primitive);
-    if (deref is PdfName) {
-      return PdfName.decodeName(deref.name);
-    }
-    if (deref is PdfString) {
-      return deref.value;
-    }
-    return null;
-  }
-
-  int? _getPdfIntValue(
-    IPdfPrimitive? primitive,
-    PdfCrossTable crossTable,
-  ) {
-    final IPdfPrimitive? deref = PdfCrossTable.dereference(primitive);
-    if (deref is PdfNumber) {
-      return deref.value?.toInt();
-    }
-    return null;
-  }
 }
 
 class _NodeInfo {
