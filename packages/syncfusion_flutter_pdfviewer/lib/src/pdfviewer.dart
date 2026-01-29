@@ -1899,9 +1899,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
           field.text = editedField.text;
         } else if (editedField is PdfCheckboxFormField &&
             field is PdfCheckboxFormField) {
-          if (editedField.children == null) {
-            field.isChecked = editedField.isChecked;
-          }
+          field.isChecked = editedField.isChecked;
         } else if (editedField is PdfRadioFormField &&
             field is PdfRadioFormField) {
           field.selectedItem = editedField.selectedItem;

@@ -207,6 +207,63 @@ class PdfCheckBoxField extends PdfCheckFieldBase {
           );
         }
       }
+      if (_helper.isLoadedField) {
+        if (_helper.checkBoxField.items != null &&
+            _helper.checkBoxField.items!.count > 0) {
+          for (int i = 0; i < _helper.checkBoxField.items!.count; i++) {
+            final PdfCheckBoxItem item =
+                _helper.checkBoxField.items![i] as PdfCheckBoxItem;
+            final PdfDictionary? itemWidget =
+                PdfFieldItemHelper.getHelper(item).dictionary;
+            if (itemWidget == null) {
+              continue;
+            }
+            final String? itemOnState =
+                _helper._resolveOnStateName(itemWidget) ?? val;
+            if (_checked) {
+              final String resolved =
+                  itemOnState ?? PdfDictionaryProperties.yes;
+              itemWidget.setName(
+                PdfName(PdfDictionaryProperties.usageApplication),
+                resolved,
+              );
+              itemWidget.setName(
+                PdfName(PdfDictionaryProperties.v),
+                resolved,
+              );
+            } else {
+              itemWidget.setName(
+                PdfName(PdfDictionaryProperties.usageApplication),
+                PdfDictionaryProperties.off,
+              );
+              if (itemWidget.containsKey(PdfDictionaryProperties.v)) {
+                itemWidget.remove(PdfDictionaryProperties.v);
+              }
+            }
+          }
+        } else {
+          final PdfDictionary widget = _helper.getWidgetAnnotation(
+            _helper.dictionary!,
+            _helper.crossTable,
+          );
+          if (_checked) {
+            final String resolved = val ?? PdfDictionaryProperties.yes;
+            widget.setName(
+              PdfName(PdfDictionaryProperties.usageApplication),
+              resolved,
+            );
+            widget.setName(PdfName(PdfDictionaryProperties.v), resolved);
+          } else {
+            widget.setName(
+              PdfName(PdfDictionaryProperties.usageApplication),
+              PdfDictionaryProperties.off,
+            );
+            if (widget.containsKey(PdfDictionaryProperties.v)) {
+              widget.remove(PdfDictionaryProperties.v);
+            }
+          }
+        }
+      }
     }
   }
 
