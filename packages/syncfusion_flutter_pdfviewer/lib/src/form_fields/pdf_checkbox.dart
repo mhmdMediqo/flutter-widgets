@@ -118,8 +118,10 @@ class PdfCheckboxFormFieldHelper extends PdfFormFieldHelper {
     if (pdfCheckBoxItem != null) {
       pdfCheckBoxItem!.checked = isChecked;
       _updateChildItems();
+      _syncGroupedItems(isChecked);
     } else {
       pdfCheckboxField.isChecked = isChecked;
+      _syncGroupedItems(isChecked);
     }
   }
 
@@ -142,6 +144,21 @@ class PdfCheckboxFormFieldHelper extends PdfFormFieldHelper {
           helper.rebuild();
         }
       }
+    }
+  }
+
+  void _syncGroupedItems(bool isChecked) {
+    if (pdfCheckboxField.items != null &&
+        pdfCheckboxField.items!.count > 0) {
+      for (int i = 0; i < pdfCheckboxField.items!.count; i++) {
+        final PdfCheckBoxItem item = pdfCheckboxField.items![i] as PdfCheckBoxItem;
+        if (item.checked != isChecked) {
+          item.checked = isChecked;
+        }
+      }
+    }
+    if (pdfCheckboxField.isChecked != isChecked) {
+      pdfCheckboxField.isChecked = isChecked;
     }
   }
 
