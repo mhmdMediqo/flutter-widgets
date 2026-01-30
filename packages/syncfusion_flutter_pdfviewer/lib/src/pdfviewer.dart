@@ -2225,6 +2225,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
     if (_pdfViewerController._formFields.isEmpty) {
       return;
     }
+    _trace(
+      '_syncFormFieldsForSave start formFields=${_pdfViewerController._formFields.length}',
+    );
     final Map<String, bool> checkboxValues = <String, bool>{};
     for (final PdfFormField formField in _pdfViewerController._formFields) {
       if (formField.readOnly) {
@@ -2240,6 +2243,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       } else if (helper is PdfCheckboxFormFieldHelper &&
           formField is PdfCheckboxFormField) {
         final bool desired = formField.isChecked;
+        _trace(
+          '_syncFormFieldsForSave checkbox name=${formField.name} desired=$desired',
+        );
         checkboxValues[formField.name] =
             (checkboxValues[formField.name] ?? false) || desired;
         if (helper.pdfCheckBoxItem != null) {
@@ -2283,6 +2289,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       }
     }
     if (checkboxValues.isEmpty || _document == null) {
+      _trace('_syncFormFieldsForSave no checkboxValues or document null');
       return;
     }
     // Also consider the current document state: if any widget is ON, make all
@@ -2292,18 +2299,25 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       if (field is PdfCheckBoxField && field.name != null) {
         checkboxValues[field.name!] =
             (checkboxValues[field.name!] ?? false) || field.isChecked;
+        _trace(
+          '_syncFormFieldsForSave docField name=${field.name} isChecked=${field.isChecked} anyOn=${checkboxValues[field.name!]}',
+        );
       }
     }
     for (int i = 0; i < _document!.form.fields.count; i++) {
       final PdfField field = _document!.form.fields[i];
       if (field is PdfCheckBoxField && field.name != null) {
         final bool? desired = checkboxValues[field.name!];
+        _trace(
+          '_syncFormFieldsForSave apply docField name=${field.name} desired=$desired current=${field.isChecked}',
+        );
         if (desired != null && field.isChecked != desired) {
           field.isChecked = desired;
         }
       }
     }
     _document!.form.normalizeCheckboxWidgets();
+    _trace('_syncFormFieldsForSave completed');
   }
 
   /// Save the PDF document with the modified data and returns the data bytes.

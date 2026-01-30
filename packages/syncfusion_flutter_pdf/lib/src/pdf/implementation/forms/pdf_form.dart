@@ -968,6 +968,13 @@ class PdfForm implements IPdfWrapper {
     if (crossTable == null || document == null) {
       return;
     }
+    assert(() {
+      // ignore: avoid_print
+      print(
+        '[PdfForm] normalizeCheckboxWidgets pages=${document.pages.count}',
+      );
+      return true;
+    }());
 
     final Map<String, List<PdfDictionary>> widgetsByName =
         <String, List<PdfDictionary>>{};
@@ -998,6 +1005,15 @@ class PdfForm implements IPdfWrapper {
           continue;
         }
         final bool isOn = _isWidgetOn(dictionary, annCrossTable);
+        assert(() {
+          // ignore: avoid_print
+          print(
+            '[PdfForm] widget name=$fieldName isOn=$isOn '
+            'as=${_getPdfNameOrStringValue(dictionary[PdfDictionaryProperties.usageApplication], annCrossTable)} '
+            'v=${_getPdfNameOrStringValue(dictionary[PdfDictionaryProperties.v], annCrossTable)}',
+          );
+          return true;
+        }());
         anyOnByName[fieldName] = (anyOnByName[fieldName] ?? false) || isOn;
         widgetsByName.putIfAbsent(fieldName, () => <PdfDictionary>[]);
         widgetsByName[fieldName]!.add(dictionary);
@@ -1014,6 +1030,13 @@ class PdfForm implements IPdfWrapper {
 
     widgetsByName.forEach((String name, List<PdfDictionary> widgets) {
       final bool anyOn = anyOnByName[name] ?? false;
+      assert(() {
+        // ignore: avoid_print
+        print(
+          '[PdfForm] group name=$name widgets=${widgets.length} anyOn=$anyOn',
+        );
+        return true;
+      }());
       if (!anyOn) {
         return;
       }
@@ -1022,6 +1045,11 @@ class PdfForm implements IPdfWrapper {
             widgetOnState[widget] ??
             _resolveOnStateFromAppearance(widget, crossTable) ??
             PdfDictionaryProperties.on;
+        assert(() {
+          // ignore: avoid_print
+          print('[PdfForm] apply name=$name resolved=$resolved');
+          return true;
+        }());
         widget.setName(
           PdfName(PdfDictionaryProperties.usageApplication),
           resolved,

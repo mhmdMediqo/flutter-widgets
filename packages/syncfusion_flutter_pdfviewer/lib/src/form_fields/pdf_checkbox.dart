@@ -114,6 +114,11 @@ class PdfCheckboxFormFieldHelper extends PdfFormFieldHelper {
 
   /// Sets the checkbox value.
   void setCheckboxValue(bool isChecked) {
+    debugPrint(
+      '[PdfCheckboxFormFieldHelper] setCheckboxValue name=${checkboxFormField.name} '
+      'checked=$isChecked hasItem=${pdfCheckBoxItem != null} '
+      'itemsCount=${pdfCheckboxField.items?.count ?? 0}',
+    );
     checkboxFormField._isChecked = isChecked;
     if (pdfCheckBoxItem != null) {
       pdfCheckBoxItem!.checked = isChecked;
@@ -129,6 +134,10 @@ class PdfCheckboxFormFieldHelper extends PdfFormFieldHelper {
   void _updateChildItems() {
     if (checkboxFormField._children != null &&
         checkboxFormField._children!.isNotEmpty) {
+      debugPrint(
+        '[PdfCheckboxFormFieldHelper] _updateChildItems name=${checkboxFormField.name} '
+        'childrenCount=${checkboxFormField._children!.length}',
+      );
       for (
         int index = 0;
         index < checkboxFormField._children!.length;
@@ -141,6 +150,11 @@ class PdfCheckboxFormFieldHelper extends PdfFormFieldHelper {
         if (helper.pdfCheckBoxItem != null) {
           checkboxFormField._children![index]._isChecked =
               helper.pdfCheckBoxItem!.checked;
+          debugPrint(
+            '[PdfCheckboxFormFieldHelper] child index=$index '
+            'childName=${checkboxFormField._children![index].name} '
+            'checked=${helper.pdfCheckBoxItem!.checked}',
+          );
           helper.rebuild();
         }
       }
@@ -148,16 +162,27 @@ class PdfCheckboxFormFieldHelper extends PdfFormFieldHelper {
   }
 
   void _syncGroupedItems(bool isChecked) {
+    debugPrint(
+      '[PdfCheckboxFormFieldHelper] _syncGroupedItems name=${checkboxFormField.name} '
+      'checked=$isChecked itemsCount=${pdfCheckboxField.items?.count ?? 0}',
+    );
     if (pdfCheckboxField.items != null &&
         pdfCheckboxField.items!.count > 0) {
       for (int i = 0; i < pdfCheckboxField.items!.count; i++) {
         final PdfCheckBoxItem item = pdfCheckboxField.items![i] as PdfCheckBoxItem;
+        debugPrint(
+          '[PdfCheckboxFormFieldHelper] item index=$i '
+          'checked=${item.checked} -> $isChecked',
+        );
         if (item.checked != isChecked) {
           item.checked = isChecked;
         }
       }
     }
     if (pdfCheckboxField.isChecked != isChecked) {
+      debugPrint(
+        '[PdfCheckboxFormFieldHelper] fieldChecked ${pdfCheckboxField.isChecked} -> $isChecked',
+      );
       pdfCheckboxField.isChecked = isChecked;
     }
   }

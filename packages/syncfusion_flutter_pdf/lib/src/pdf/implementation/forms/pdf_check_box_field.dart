@@ -134,6 +134,14 @@ class PdfCheckBoxField extends PdfCheckFieldBase {
   }
 
   set isChecked(bool value) {
+    assert(() {
+      // ignore: avoid_print
+      print(
+        '[PdfCheckBoxField] isChecked name=${name} incoming=$value '
+        'loaded=${_helper.isLoadedField} items=${_items?.count ?? 0}',
+      );
+      return true;
+    }());
     if (_helper.isLoadedField) {
       if (_helper.dictionary!.containsKey(PdfDictionaryProperties.v)) {
         if (_helper.dictionary![PdfDictionaryProperties.v]! is PdfName) {
@@ -186,6 +194,13 @@ class PdfCheckBoxField extends PdfCheckFieldBase {
           }
           val = onState ?? val;
         }
+        assert(() {
+          // ignore: avoid_print
+          print(
+            '[PdfCheckBoxField] resolved onState name=${name} value=$val checked=$value',
+          );
+          return true;
+        }());
       }
       if (_checked) {
         _helper.dictionary!.setName(
@@ -207,6 +222,13 @@ class PdfCheckBoxField extends PdfCheckFieldBase {
           );
         }
       }
+      assert(() {
+        // ignore: avoid_print
+        print(
+          '[PdfCheckBoxField] write /V=/AS name=${name} checked=$_checked',
+        );
+        return true;
+      }());
       if (_helper.isLoadedField) {
         if (_helper.checkBoxField.items != null &&
             _helper.checkBoxField.items!.count > 0) {
