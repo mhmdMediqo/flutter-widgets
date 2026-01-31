@@ -221,16 +221,15 @@ class PdfRadioButtonListField extends PdfField {
   void _assignSelectedIndex(int value) {
     final int index = _helper.selectedIndex;
     if (index != value) {
-      PdfName? name;
+      final Set<String> previousValues = _getSelectedValueCandidates();
       if (_helper.dictionary!.containsKey(PdfDictionaryProperties.v)) {
-        name = _helper.dictionary![PdfDictionaryProperties.v] as PdfName?;
         _helper.dictionary!.remove(PdfDictionaryProperties.v);
         _helper.dictionary!.remove(PdfDictionaryProperties.dv);
       }
-      if (name != null) {
+      if (previousValues.isNotEmpty) {
         for (int i = 0; i < items.count; i++) {
           final PdfRadioButtonListItem item = items[i];
-          if (item.value == name.name) {
+          if (previousValues.contains(item.value)) {
             PdfFieldHelper.getHelper(item).dictionary!.setName(
               PdfName(PdfDictionaryProperties.usageApplication),
               PdfDictionaryProperties.off,
@@ -246,17 +245,16 @@ class PdfRadioButtonListField extends PdfField {
   }
 
   void _assignSelectedValue(String value) {
-    PdfName? name;
+    final Set<String> previousValues = _getSelectedValueCandidates();
     value = PdfName.decodeName(value)!;
     if (_helper.dictionary!.containsKey(PdfDictionaryProperties.v)) {
-      name = _helper.dictionary![PdfDictionaryProperties.v] as PdfName?;
       _helper.dictionary!.remove(PdfDictionaryProperties.v);
       _helper.dictionary!.remove(PdfDictionaryProperties.dv);
     }
-    if (name != null) {
+    if (previousValues.isNotEmpty) {
       for (int i = 0; i < items.count; i++) {
         final PdfRadioButtonListItem item = items[i];
-        if (item.value == PdfName.decodeName(name.name)) {
+        if (previousValues.contains(item.value)) {
           PdfFieldHelper.getHelper(item).dictionary!.setName(
             PdfName(PdfDictionaryProperties.usageApplication),
             PdfDictionaryProperties.off,
@@ -315,6 +313,27 @@ class PdfRadioButtonListField extends PdfField {
         }
       }
     }
+  }
+
+  Set<String> _getSelectedValueCandidates() {
+    final Set<String> values = <String>{};
+    if (!_helper.dictionary!.containsKey(PdfDictionaryProperties.v)) {
+      return values;
+    }
+    final IPdfPrimitive? primitive =
+        _helper.dictionary![PdfDictionaryProperties.v];
+    final IPdfPrimitive? resolved =
+        primitive is PdfReferenceHolder ? primitive.object : primitive;
+    if (resolved is PdfName && resolved.name != null) {
+      values.add(resolved.name!);
+      final String? decoded = PdfName.decodeName(resolved.name);
+      if (decoded != null) {
+        values.add(decoded);
+      }
+    } else if (resolved is PdfString && resolved.value != null) {
+      values.add(resolved.value!);
+    }
+    return values;
   }
 }
 
