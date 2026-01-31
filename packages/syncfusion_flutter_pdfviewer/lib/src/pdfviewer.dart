@@ -1887,6 +1887,9 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
         ),
       );
     }
+    if (_skipAddingFormFieldChange) {
+      return;
+    }
     _changeLinkedFieldValue(details.formField);
   }
 
