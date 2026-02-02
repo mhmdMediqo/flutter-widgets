@@ -2272,17 +2272,35 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       } else if (helper is PdfComboBoxFormFieldHelper &&
           formField is PdfComboBoxFormField) {
         final String desiredText = formField.selectedItem;
+        final int itemCount = helper.pdfComboBoxField.items.count;
+        if (itemCount == 0) {
+          if (desiredText.isEmpty || !helper.pdfComboBoxField.editable) {
+            _trace(
+              '_syncFormFieldsForSave skip combo name=${formField.name} desired=$desiredText (no items, not editable)',
+            );
+            continue;
+          }
+          if (helper.pdfComboBoxField.selectedValue != desiredText) {
+            helper.pdfComboBoxField.selectedValue = desiredText;
+          }
+          continue;
+        }
+        if (desiredText.isEmpty && !helper.pdfComboBoxField.editable) {
+          _trace(
+            '_syncFormFieldsForSave skip combo name=${formField.name} desired=$desiredText (empty, not editable)',
+          );
+          continue;
+        }
+        final bool isText = helper.pdfComboBoxField.items[0].value.isEmpty;
         String? resolvedValue;
         if (desiredText.isNotEmpty) {
-          for (int i = 0; i < helper.pdfComboBoxField.items.count; i++) {
+          for (int i = 0; i < itemCount; i++) {
             final PdfListFieldItem item = helper.pdfComboBoxField.items[i];
             if (item.text == desiredText || item.value == desiredText) {
-              resolvedValue = item.value.isNotEmpty ? item.value : item.text;
+              resolvedValue = isText ? item.text : item.value;
               break;
             }
           }
-        } else {
-          resolvedValue = '';
         }
         if (resolvedValue == null) {
           if (helper.pdfComboBoxField.editable) {
