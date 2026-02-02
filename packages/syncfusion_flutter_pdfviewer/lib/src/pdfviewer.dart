@@ -2397,6 +2397,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       }
     }
     _document!.form.normalizeCheckboxWidgets();
+    _document!.form.normalizeRadioWidgets();
     _trace('_syncFormFieldsForSave completed');
   }
 

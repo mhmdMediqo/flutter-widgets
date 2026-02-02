@@ -1063,6 +1063,87 @@ class PdfForm implements IPdfWrapper {
     });
   }
 
+  /// Normalizes radio button widgets so only the widget that matches the
+  /// parent /V remains ON and the rest are set to /Off.
+  void normalizeRadioWidgets() {
+    final PdfCrossTable? crossTable = _helper.crossTable;
+    final PdfDocument? document = crossTable?.document;
+    if (crossTable == null || document == null) {
+      return;
+    }
+
+    final Map<PdfDictionary, List<PdfDictionary>> widgetsByParent =
+        <PdfDictionary, List<PdfDictionary>>{};
+    final Map<PdfDictionary, String?> parentValueByDict =
+        <PdfDictionary, String?>{};
+
+    for (int pageIndex = 0; pageIndex < document.pages.count; pageIndex++) {
+      final PdfPage page = document.pages[pageIndex];
+      final PdfAnnotationCollection annotations = page.annotations;
+      for (int i = 0; i < annotations.count; i++) {
+        final PdfAnnotation annotation = annotations[i];
+        final PdfAnnotationHelper annHelper =
+            PdfAnnotationHelper.getHelper(annotation);
+        final PdfDictionary? dictionary = annHelper.dictionary;
+        final PdfCrossTable? annCrossTable = annHelper.crossTable;
+        if (dictionary == null || annCrossTable == null) {
+          continue;
+        }
+        if (!_isRadioWidget(dictionary, annCrossTable)) {
+          continue;
+        }
+        final PdfDictionary? parent = _getParentDictionary(
+          dictionary,
+          annCrossTable,
+        );
+        if (parent == null) {
+          continue;
+        }
+        widgetsByParent.putIfAbsent(parent, () => <PdfDictionary>[]).add(
+          dictionary,
+        );
+        parentValueByDict.putIfAbsent(
+          parent,
+          () => _getPdfNameOrStringValue(
+            parent[PdfDictionaryProperties.v],
+            annCrossTable,
+          ),
+        );
+      }
+    }
+
+    if (widgetsByParent.isEmpty) {
+      return;
+    }
+
+    widgetsByParent.forEach((
+      PdfDictionary parent,
+      List<PdfDictionary> widgets,
+    ) {
+      final String? selectedValue = parentValueByDict[parent];
+      bool matched = false;
+      for (final PdfDictionary widget in widgets) {
+        final String? onState = _resolveRadioWidgetOnState(widget, crossTable);
+        if (!matched &&
+            selectedValue != null &&
+            selectedValue != PdfDictionaryProperties.off &&
+            onState != null &&
+            onState == selectedValue) {
+          widget.setName(
+            PdfName(PdfDictionaryProperties.usageApplication),
+            onState,
+          );
+          matched = true;
+        } else {
+          widget.setName(
+            PdfName(PdfDictionaryProperties.usageApplication),
+            PdfDictionaryProperties.off,
+          );
+        }
+      }
+    });
+  }
+
   bool _isCheckboxWidget(PdfDictionary dictionary, PdfCrossTable crossTable) {
     final String? subtype = _getPdfNameValue(
       dictionary[PdfDictionaryProperties.subtype],
@@ -1087,6 +1168,28 @@ class PdfForm implements IPdfWrapper {
       return false;
     }
     return true;
+  }
+
+  bool _isRadioWidget(PdfDictionary dictionary, PdfCrossTable crossTable) {
+    final String? subtype = _getPdfNameValue(
+      dictionary[PdfDictionaryProperties.subtype],
+      crossTable,
+    );
+    if (subtype != PdfDictionaryProperties.widget) {
+      return false;
+    }
+    final String? fieldType = _getPdfNameValue(
+      dictionary[PdfDictionaryProperties.ft],
+      crossTable,
+    );
+    if (fieldType != PdfDictionaryProperties.btn) {
+      return false;
+    }
+    final int? flags = _getPdfIntValue(
+      dictionary[PdfDictionaryProperties.fieldFlags],
+      crossTable,
+    );
+    return flags != null && (flags & 32768) != 0;
   }
 
   bool _isWidgetOn(PdfDictionary dictionary, PdfCrossTable crossTable) {
@@ -1145,6 +1248,20 @@ class PdfForm implements IPdfWrapper {
       }
     }
     return null;
+  }
+
+  String? _resolveRadioWidgetOnState(
+    PdfDictionary dictionary,
+    PdfCrossTable crossTable,
+  ) {
+    final String? asValue = _getPdfNameOrStringValue(
+      dictionary[PdfDictionaryProperties.usageApplication],
+      crossTable,
+    );
+    if (asValue != null && asValue != PdfDictionaryProperties.off) {
+      return asValue;
+    }
+    return _resolveOnStateFromAppearance(dictionary, crossTable);
   }
 
   String? _getWidgetFieldName(
