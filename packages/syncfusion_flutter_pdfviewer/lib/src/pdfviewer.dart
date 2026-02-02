@@ -2271,9 +2271,31 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
         }
       } else if (helper is PdfComboBoxFormFieldHelper &&
           formField is PdfComboBoxFormField) {
-        final String desired = formField.selectedItem;
-        if (helper.pdfComboBoxField.selectedValue != desired) {
-          helper.setComboBoxValue(desired);
+        final String desiredText = formField.selectedItem;
+        String? resolvedValue;
+        if (desiredText.isNotEmpty) {
+          for (int i = 0; i < helper.pdfComboBoxField.items.count; i++) {
+            final PdfListFieldItem item = helper.pdfComboBoxField.items[i];
+            if (item.text == desiredText || item.value == desiredText) {
+              resolvedValue = item.value.isNotEmpty ? item.value : item.text;
+              break;
+            }
+          }
+        } else {
+          resolvedValue = '';
+        }
+        if (resolvedValue == null) {
+          if (helper.pdfComboBoxField.editable) {
+            resolvedValue = desiredText;
+          } else {
+            _trace(
+              '_syncFormFieldsForSave skip combo name=${formField.name} desired=$desiredText (not in items and not editable)',
+            );
+            continue;
+          }
+        }
+        if (helper.pdfComboBoxField.selectedValue != resolvedValue) {
+          helper.pdfComboBoxField.selectedValue = resolvedValue;
         }
       } else if (helper is PdfListBoxFormFieldHelper &&
           formField is PdfListBoxFormField) {
