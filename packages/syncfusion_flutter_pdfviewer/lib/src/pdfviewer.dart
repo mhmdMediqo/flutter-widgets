@@ -2232,10 +2232,13 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       '_syncFormFieldsForSave start formFields=${_pdfViewerController._formFields.length}',
     );
     final Map<String, bool> checkboxValues = <String, bool>{};
+    final Set<String> syncedComboNames = <String>{};
+    final Set<String> syncedRadioNames = <String>{};
     for (final PdfFormField formField in _pdfViewerController._formFields) {
       if (formField.readOnly) {
         continue;
       }
+      final String? fieldName = formField.name;
       final PdfFormFieldHelper helper = PdfFormFieldHelper.getHelper(formField);
       if (helper is PdfTextFormFieldHelper &&
           formField is PdfTextFormField) {
@@ -2260,6 +2263,15 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
         }
       } else if (helper is PdfRadioFormFieldHelper &&
           formField is PdfRadioFormField) {
+        if (fieldName != null && syncedRadioNames.contains(fieldName)) {
+          _trace(
+            '_syncFormFieldsForSave skip radio duplicate name=$fieldName',
+          );
+          continue;
+        }
+        if (fieldName != null) {
+          syncedRadioNames.add(fieldName);
+        }
         final String desired = formField.selectedItem;
         final int currentIndex = helper.pdfRadioField.selectedIndex;
         final String currentValue =
@@ -2271,6 +2283,15 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
         }
       } else if (helper is PdfComboBoxFormFieldHelper &&
           formField is PdfComboBoxFormField) {
+        if (fieldName != null && syncedComboNames.contains(fieldName)) {
+          _trace(
+            '_syncFormFieldsForSave skip combo duplicate name=$fieldName',
+          );
+          continue;
+        }
+        if (fieldName != null) {
+          syncedComboNames.add(fieldName);
+        }
         final String desiredText = formField.selectedItem;
         final int itemCount = helper.pdfComboBoxField.items.count;
         if (itemCount == 0) {
@@ -2308,6 +2329,22 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
           } else {
             _trace(
               '_syncFormFieldsForSave skip combo name=${formField.name} desired=$desiredText (not in items and not editable)',
+            );
+            continue;
+          }
+        }
+        if (!helper.pdfComboBoxField.editable) {
+          bool exists = false;
+          for (int i = 0; i < itemCount; i++) {
+            final PdfListFieldItem item = helper.pdfComboBoxField.items[i];
+            if ((isText ? item.text : item.value) == resolvedValue) {
+              exists = true;
+              break;
+            }
+          }
+          if (!exists) {
+            _trace(
+              '_syncFormFieldsForSave skip combo name=${formField.name} resolved=$resolvedValue (not in items)',
             );
             continue;
           }
