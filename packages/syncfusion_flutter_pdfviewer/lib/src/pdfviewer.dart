@@ -2233,7 +2233,6 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
     );
     final Map<String, bool> checkboxValues = <String, bool>{};
     final Set<String> syncedComboNames = <String>{};
-    final Set<String> syncedRadioNames = <String>{};
     for (final PdfFormField formField in _pdfViewerController._formFields) {
       if (formField.readOnly) {
         continue;
@@ -2263,24 +2262,8 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
         }
       } else if (helper is PdfRadioFormFieldHelper &&
           formField is PdfRadioFormField) {
-        if (fieldName != null && syncedRadioNames.contains(fieldName)) {
-          _trace(
-            '_syncFormFieldsForSave skip radio duplicate name=$fieldName',
-          );
-          continue;
-        }
-        if (fieldName != null) {
-          syncedRadioNames.add(fieldName);
-        }
         final String desired = formField.selectedItem;
-        final int currentIndex = helper.pdfRadioField.selectedIndex;
-        final String currentValue =
-            currentIndex != -1
-                ? helper.pdfRadioField.items[currentIndex].value
-                : '';
-        if (currentValue != desired) {
-          helper.setRadioButtonValue(desired);
-        }
+        _applyRadioWidgetState(helper.pdfRadioField, desired);
       } else if (helper is PdfComboBoxFormFieldHelper &&
           formField is PdfComboBoxFormField) {
         if (fieldName != null && syncedComboNames.contains(fieldName)) {
@@ -2399,6 +2382,67 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
     _document!.form.normalizeCheckboxWidgets();
     _document!.form.normalizeRadioWidgets();
     _trace('_syncFormFieldsForSave completed');
+  }
+
+  void _applyRadioWidgetState(PdfRadioButtonListField field, String desired) {
+    final PdfDictionary? fieldDictionary =
+        PdfFieldHelper.getHelper(field).dictionary;
+    if (fieldDictionary == null) {
+      return;
+    }
+    final String? normalizedDesired =
+        desired.isEmpty ? null : (PdfName.normalizeValue(desired) ?? desired);
+    String? selectedValue;
+    bool matched = false;
+    for (int i = 0; i < field.items.count; i++) {
+      final PdfRadioButtonListItem item = field.items[i];
+      final PdfDictionary? widget =
+          PdfFieldItemHelper.getHelper(item).dictionary;
+      if (widget == null) {
+        continue;
+      }
+      final String itemValue = item.value;
+      final String normalizedValue =
+          PdfName.normalizeValue(itemValue) ?? itemValue;
+      final bool isSelected =
+          normalizedDesired != null &&
+          (normalizedDesired == normalizedValue ||
+              normalizedDesired == itemValue);
+      if (isSelected && !matched) {
+        matched = true;
+        selectedValue = normalizedValue;
+        widget.setName(
+          PdfName(PdfDictionaryProperties.usageApplication),
+          normalizedValue,
+        );
+        widget.setName(PdfName(PdfDictionaryProperties.v), normalizedValue);
+      } else {
+        widget.setName(
+          PdfName(PdfDictionaryProperties.usageApplication),
+          PdfDictionaryProperties.off,
+        );
+        if (widget.containsKey(PdfDictionaryProperties.v)) {
+          widget.remove(PdfDictionaryProperties.v);
+        }
+      }
+    }
+    if (selectedValue != null) {
+      fieldDictionary.setName(
+        PdfName(PdfDictionaryProperties.v),
+        selectedValue,
+      );
+      fieldDictionary.setName(
+        PdfName(PdfDictionaryProperties.dv),
+        selectedValue,
+      );
+    } else {
+      if (fieldDictionary.containsKey(PdfDictionaryProperties.v)) {
+        fieldDictionary.remove(PdfDictionaryProperties.v);
+      }
+      if (fieldDictionary.containsKey(PdfDictionaryProperties.dv)) {
+        fieldDictionary.remove(PdfDictionaryProperties.dv);
+      }
+    }
   }
 
   /// Save the PDF document with the modified data and returns the data bytes.
