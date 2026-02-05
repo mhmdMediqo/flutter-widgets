@@ -1152,15 +1152,15 @@ class PdfForm implements IPdfWrapper {
     if (subtype != PdfDictionaryProperties.widget) {
       return false;
     }
-    final String? fieldType = _getPdfNameValue(
-      dictionary[PdfDictionaryProperties.ft],
+    final String? fieldType = _getFieldTypeFromWidgetOrParent(
+      dictionary,
       crossTable,
     );
     if (fieldType != PdfDictionaryProperties.btn) {
       return false;
     }
-    final int? flags = _getPdfIntValue(
-      dictionary[PdfDictionaryProperties.fieldFlags],
+    final int? flags = _getFieldFlagsFromWidgetOrParent(
+      dictionary,
       crossTable,
     );
     // Skip radio buttons (bit 15 set).
@@ -1178,15 +1178,15 @@ class PdfForm implements IPdfWrapper {
     if (subtype != PdfDictionaryProperties.widget) {
       return false;
     }
-    final String? fieldType = _getPdfNameValue(
-      dictionary[PdfDictionaryProperties.ft],
+    final String? fieldType = _getFieldTypeFromWidgetOrParent(
+      dictionary,
       crossTable,
     );
     if (fieldType != PdfDictionaryProperties.btn) {
       return false;
     }
-    final int? flags = _getPdfIntValue(
-      dictionary[PdfDictionaryProperties.fieldFlags],
+    final int? flags = _getFieldFlagsFromWidgetOrParent(
+      dictionary,
       crossTable,
     );
     return flags != null && (flags & 32768) != 0;
@@ -1293,6 +1293,42 @@ class PdfForm implements IPdfWrapper {
       dictionary[PdfDictionaryProperties.parent],
     );
     return parent is PdfDictionary ? parent : null;
+  }
+
+  String? _getFieldTypeFromWidgetOrParent(
+    PdfDictionary dictionary,
+    PdfCrossTable crossTable,
+  ) {
+    final String? direct = _getPdfNameValue(
+      dictionary[PdfDictionaryProperties.ft],
+      crossTable,
+    );
+    if (direct != null) {
+      return direct;
+    }
+    final PdfDictionary? parent = _getParentDictionary(dictionary, crossTable);
+    if (parent == null) {
+      return null;
+    }
+    return _getPdfNameValue(parent[PdfDictionaryProperties.ft], crossTable);
+  }
+
+  int? _getFieldFlagsFromWidgetOrParent(
+    PdfDictionary dictionary,
+    PdfCrossTable crossTable,
+  ) {
+    final int? direct = _getPdfIntValue(
+      dictionary[PdfDictionaryProperties.fieldFlags],
+      crossTable,
+    );
+    if (direct != null) {
+      return direct;
+    }
+    final PdfDictionary? parent = _getParentDictionary(dictionary, crossTable);
+    if (parent == null) {
+      return null;
+    }
+    return _getPdfIntValue(parent[PdfDictionaryProperties.fieldFlags], crossTable);
   }
 
   String? _getPdfNameValue(IPdfPrimitive? primitive, PdfCrossTable crossTable) {
