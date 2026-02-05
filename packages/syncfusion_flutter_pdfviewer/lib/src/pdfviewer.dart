@@ -12,6 +12,11 @@ import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_core/localizations.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:syncfusion_flutter_pdf/src/pdf/implementation/forms/pdf_field.dart';
+import 'package:syncfusion_flutter_pdf/src/pdf/implementation/forms/pdf_check_box_field.dart';
+import 'package:syncfusion_flutter_pdf/src/pdf/implementation/primitives/pdf_dictionary.dart';
+import 'package:syncfusion_flutter_pdf/src/pdf/implementation/primitives/pdf_name.dart';
+import 'package:syncfusion_flutter_pdf/src/pdf/implementation/io/pdf_constants.dart';
 
 import 'annotation/annotation.dart';
 import 'annotation/annotation_settings.dart';
@@ -2397,7 +2402,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
     for (int i = 0; i < field.items.count; i++) {
       final PdfRadioButtonListItem item = field.items[i];
       final PdfDictionary? widget =
-          PdfFieldItemHelper.getHelper(item).dictionary;
+          PdfRadioButtonListItemHelper.getHelper(item).dictionary;
       if (widget == null) {
         continue;
       }
