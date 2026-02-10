@@ -207,6 +207,20 @@ class PdfComboBox extends StatefulWidget {
 class _PdfComboBoxState extends State<PdfComboBox> {
   @override
   Widget build(BuildContext context) {
+    final double fieldHeight = widget.bounds.height / widget.heightPercentage;
+    final double availableHeight =
+        fieldHeight - (widget.borderWidth * 2) - 4.0;
+    final double maxFontSize = availableHeight > 1.0 ? availableHeight : 1.0;
+    double effectiveFontSize = widget.fontSize ?? 14.0;
+    if (effectiveFontSize > maxFontSize) {
+      effectiveFontSize = maxFontSize;
+    }
+    final TextStyle itemTextStyle = TextStyle(
+      fontSize: effectiveFontSize,
+      fontFamily: widget.font,
+      color: Colors.black,
+      height: 1.0,
+    );
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Container(
@@ -231,13 +245,14 @@ class _PdfComboBoxState extends State<PdfComboBox> {
                     child: Text(
                       textAlign: widget.textAlign,
                       value,
-                      style: const TextStyle(fontSize: 16.0),
+                      style: itemTextStyle,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 );
               }).toList(),
           isExpanded: true,
+          isDense: true,
           onChanged:
               widget.readOnly
                   ? null
@@ -246,7 +261,7 @@ class _PdfComboBoxState extends State<PdfComboBox> {
                       widget.onValueChanged!(newValue);
                     }
                   },
-          style: Theme.of(context).textTheme.bodyMedium,
+          style: itemTextStyle,
           selectedItemBuilder: (BuildContext context) {
             return widget.items.map((String value) {
               return Padding(
@@ -257,10 +272,7 @@ class _PdfComboBoxState extends State<PdfComboBox> {
                     value,
                     textAlign: widget.textAlign,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: widget.fontSize,
-                      color: Colors.black,
-                    ),
+                    style: itemTextStyle,
                   ),
                 ),
               );
