@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../../pdfviewer.dart';
@@ -208,8 +210,7 @@ class _PdfComboBoxState extends State<PdfComboBox> {
   @override
   Widget build(BuildContext context) {
     final double fieldHeight = widget.bounds.height / widget.heightPercentage;
-    final double availableHeight =
-        fieldHeight - (widget.borderWidth * 2) - 4.0;
+    final double availableHeight = fieldHeight - (widget.borderWidth * 2) - 4.0;
     final double maxFontSize = availableHeight > 1.0 ? availableHeight : 1.0;
     double effectiveFontSize = widget.fontSize ?? 14.0;
     if (effectiveFontSize > maxFontSize) {
@@ -221,8 +222,7 @@ class _PdfComboBoxState extends State<PdfComboBox> {
       color: Colors.black,
       height: 1.0,
     );
-    final double selectedFontSize =
-        max(1.0, effectiveFontSize * 0.5);
+    final double selectedFontSize = max(1.0, effectiveFontSize * 0.5);
     final TextStyle selectedTextStyle = itemTextStyle.copyWith(
       fontSize: selectedFontSize,
     );
