@@ -221,6 +221,11 @@ class _PdfComboBoxState extends State<PdfComboBox> {
       color: Colors.black,
       height: 1.0,
     );
+    final double selectedFontSize =
+        max(1.0, effectiveFontSize * 0.5);
+    final TextStyle selectedTextStyle = itemTextStyle.copyWith(
+      fontSize: selectedFontSize,
+    );
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Container(
@@ -261,7 +266,7 @@ class _PdfComboBoxState extends State<PdfComboBox> {
                       widget.onValueChanged!(newValue);
                     }
                   },
-          style: itemTextStyle,
+          style: selectedTextStyle,
           selectedItemBuilder: (BuildContext context) {
             return widget.items.map((String value) {
               return Padding(
@@ -272,7 +277,7 @@ class _PdfComboBoxState extends State<PdfComboBox> {
                     value,
                     textAlign: widget.textAlign,
                     overflow: TextOverflow.ellipsis,
-                    style: itemTextStyle,
+                    style: selectedTextStyle,
                   ),
                 ),
               );
