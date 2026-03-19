@@ -1972,11 +1972,10 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
         }
         if (field is PdfComboBoxField && formField is PdfComboBoxFormField) {
           if (!formField.readOnly) {
-            final String selectedItem =
-                field.selectedIndex != -1
-                    ? field.items[field.selectedIndex].text
-                    : '';
-            record = _updateFormField(formField, selectedItem);
+            record = _updateFormField(
+              formField,
+              _resolveComboBoxDisplayValue(field),
+            );
           } else {
             field.selectedValue = formField.selectedItem;
           }
@@ -2020,6 +2019,23 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
     _trace(
       '_retrieveFormFieldsDetails completed trackedFormFields=${_pdfViewerController._formFields.length}',
     );
+  }
+
+  String _resolveComboBoxDisplayValue(PdfComboBoxField field) {
+    if (field.selectedIndex >= 0 && field.selectedIndex < field.items.count) {
+      return field.items[field.selectedIndex].text;
+    }
+    if (field.selectedValue.isEmpty) {
+      return '';
+    }
+    for (int index = 0; index < field.items.count; index++) {
+      final PdfListFieldItem item = field.items[index];
+      if (item.text == field.selectedValue ||
+          item.value == field.selectedValue) {
+        return item.text;
+      }
+    }
+    return field.editable ? field.selectedValue : '';
   }
 
   /// Update the form field values.
@@ -2244,8 +2260,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       }
       final String? fieldName = formField.name;
       final PdfFormFieldHelper helper = PdfFormFieldHelper.getHelper(formField);
-      if (helper is PdfTextFormFieldHelper &&
-          formField is PdfTextFormField) {
+      if (helper is PdfTextFormFieldHelper && formField is PdfTextFormField) {
         final String currentText = helper.textEditingController.text;
         if (helper.pdfTextField.text != currentText) {
           helper.setTextBoxValue(currentText);
@@ -2272,9 +2287,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       } else if (helper is PdfComboBoxFormFieldHelper &&
           formField is PdfComboBoxFormField) {
         if (fieldName != null && syncedComboNames.contains(fieldName)) {
-          _trace(
-            '_syncFormFieldsForSave skip combo duplicate name=$fieldName',
-          );
+          _trace('_syncFormFieldsForSave skip combo duplicate name=$fieldName');
           continue;
         }
         if (fieldName != null) {

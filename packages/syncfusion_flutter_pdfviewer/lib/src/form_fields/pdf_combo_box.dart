@@ -54,10 +54,27 @@ class PdfComboBoxFormFieldHelper extends PdfFormFieldHelper {
       items.add(pdfComboBoxField.items[index].text);
     }
 
-    final String selectedValue =
-        pdfComboBoxField.selectedIndex != -1
-            ? pdfComboBoxField.items[pdfComboBoxField.selectedIndex].text
-            : '';
+    String selectedValue = '';
+    if (pdfComboBoxField.selectedIndex >= 0 &&
+        pdfComboBoxField.selectedIndex < pdfComboBoxField.items.count) {
+      selectedValue =
+          pdfComboBoxField.items[pdfComboBoxField.selectedIndex].text;
+    } else if (pdfComboBoxField.selectedValue.isNotEmpty) {
+      for (int index = 0; index < pdfComboBoxField.items.count; index++) {
+        final PdfListFieldItem item = pdfComboBoxField.items[index];
+        if (item.text == pdfComboBoxField.selectedValue ||
+            item.value == pdfComboBoxField.selectedValue) {
+          selectedValue = item.text;
+          break;
+        }
+      }
+      if (selectedValue.isEmpty && pdfComboBoxField.editable) {
+        selectedValue = pdfComboBoxField.selectedValue;
+        if (!items.contains(selectedValue)) {
+          items.add(selectedValue);
+        }
+      }
+    }
 
     comboBoxFormField =
         PdfComboBoxFormField._()
@@ -128,14 +145,20 @@ class PdfComboBoxFormFieldHelper extends PdfFormFieldHelper {
                 ),
         borderColor:
             pdfComboBoxField.borderColor.isEmpty
-                ? Colors.transparent
+                ? const Color(0xFF9AA8D9)
                 : Color.fromRGBO(
                   pdfComboBoxField.borderColor.r,
                   pdfComboBoxField.borderColor.g,
                   pdfComboBoxField.borderColor.b,
                   1,
                 ),
-        borderWidth: pdfComboBoxField.borderWidth / heightPercentage,
+        borderWidth:
+            pdfComboBoxField.borderColor.isEmpty
+                ? max(
+                  1 / heightPercentage,
+                  pdfComboBoxField.borderWidth / heightPercentage,
+                )
+                : pdfComboBoxField.borderWidth / heightPercentage,
         fontSize: (pdfComboBoxField.font?.size ?? 14.0) / heightPercentage,
         onValueChanged: invokeValueChanged,
       ),
@@ -222,7 +245,7 @@ class _PdfComboBoxState extends State<PdfComboBox> {
       color: Colors.black,
       height: 1.0,
     );
-    final double selectedFontSize = max(1.0, effectiveFontSize * 0.5);
+    final double selectedFontSize = effectiveFontSize;
     final TextStyle selectedTextStyle = itemTextStyle.copyWith(
       fontSize: selectedFontSize,
     );
