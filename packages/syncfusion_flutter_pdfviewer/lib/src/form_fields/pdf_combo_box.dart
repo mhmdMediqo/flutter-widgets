@@ -75,6 +75,9 @@ class PdfComboBoxFormFieldHelper extends PdfFormFieldHelper {
         }
       }
     }
+    if (selectedValue.isEmpty && items.isNotEmpty) {
+      selectedValue = items.first;
+    }
 
     comboBoxFormField =
         PdfComboBoxFormField._()

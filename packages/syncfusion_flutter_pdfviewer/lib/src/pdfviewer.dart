@@ -2026,7 +2026,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
       return field.items[field.selectedIndex].text;
     }
     if (field.selectedValue.isEmpty) {
-      return '';
+      return field.items.count > 0 ? field.items[0].text : '';
     }
     for (int index = 0; index < field.items.count; index++) {
       final PdfListFieldItem item = field.items[index];
@@ -2035,7 +2035,7 @@ class SfPdfViewerState extends State<SfPdfViewer> with WidgetsBindingObserver {
         return item.text;
       }
     }
-    return field.editable ? field.selectedValue : '';
+    return field.items.count > 0 ? field.items[0].text : '';
   }
 
   /// Update the form field values.
